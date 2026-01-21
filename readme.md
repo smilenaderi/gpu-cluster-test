@@ -35,6 +35,16 @@ gpu-cluster-test/
 
 ## Quick Start
 
+
+##  Setup GPU Cluster Test
+```bash
+cd /shared
+git clone https://github.com/smilenaderi/gpu-cluster-test.git
+cd gpu-cluster-test
+chmod +x scripts/run_acceptance.sh
+./scripts/run_acceptance.sh
+```
+
 ### Option 1: Slurm (Batch Job)
 
 Submit as a batch job to Slurm:

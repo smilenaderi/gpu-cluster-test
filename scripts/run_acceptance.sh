@@ -41,7 +41,7 @@ srun --nodes=2 \
      --partition=main \
      --job-name=gpu-cluster-test \
      --container-image=pytorch/pytorch:2.4.0-cuda12.4-cudnn9-devel \
-     --container-mounts=/shared/smoke-test/gpu-cluster-test:/workspace/project \
+     --container-mounts=/shared/gpu-cluster-test:/workspace/project \
      bash -c "pip install -q --no-cache-dir torchvision --no-deps && \
      torchrun \
          --nnodes=2 \
