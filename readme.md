@@ -16,13 +16,16 @@ This project provides a lightweight acceptance test that:
 ```
 gpu-cluster-test/
 ├── src/
-│   ├── train.py           # Main training script with DDP
-│   └── requirements.txt   # Python dependencies
+│   ├── train.py              # Main training script with DDP
+│   └── requirements.txt      # Python dependencies
 ├── scripts/
-│   ├── cluster_acceptance.sh  # Slurm batch job script
-│   └── run_acceptance.sh      # Interactive Slurm launcher
-├── Dockerfile             # Container definition
-└── readme.md             # This file
+│   ├── run_acceptance.sh     # Interactive Slurm launcher
+│   ├── validate_clsuter.sh   # Slurm job with custom image
+│   └── import_image.sh       # Import custom image from GHCR
+├── images/                   # Container images (.sqsh files)
+├── logs/                     # Job output logs
+├── Dockerfile                # Container definition
+└── readme.md                 # This file
 ```
 
 ## Prerequisites
@@ -45,28 +48,35 @@ chmod +x scripts/run_acceptance.sh
 ./scripts/run_acceptance.sh
 ```
 
-### Option 1: Slurm (Batch Job)
-
-Submit as a batch job to Slurm:
-
-```bash
-sbatch scripts/cluster_acceptance.sh
-```
-
-Monitor the job:
-
-```bash
-squeue -u $USER
-tail -f scripts/acceptance_<job_id>.out
-```
-
-### Option 2: Slurm (Interactive)
+### Option 1: Slurm (Interactive)
 
 Run interactively with real-time output:
 
 ```bash
 chmod +x scripts/run_acceptance.sh
 ./scripts/run_acceptance.sh
+```
+
+### Option 2: Slurm (Custom Image from GHCR)
+
+First, import your custom Docker image from GitHub Container Registry:
+
+```bash
+cd /shared/gpu-cluster-test
+./scripts/import_image.sh
+```
+
+This will download and convert the image to `images/smilenaderi+gpu-cluster-test+main.sqsh`. Then submit the job:
+
+```bash
+sbatch scripts/validate_clsuter.sh
+```
+
+Monitor the job:
+
+```bash
+squeue -u $USER
+tail -f logs/acceptance_<job_id>.out
 ```
 
 ### Option 3: Docker (Single Node)
@@ -135,11 +145,32 @@ Available options:
 
 ### Slurm Configuration
 
-Edit `scripts/cluster_acceptance.sh` to adjust:
+Edit `scripts/run_acceptance.sh` or `scripts/validate_clsuter.sh` to adjust:
 - `--nodes`: Number of nodes (default: 2)
 - `--gpus-per-node`: GPUs per node (default: 8)
 - `--time`: Job time limit (default: 00:20:00)
 - `--partition`: Slurm partition name
+
+### Custom Image Configuration
+
+To use your own Docker image from GitHub Container Registry:
+
+1. Build and push your image to GHCR:
+```bash
+docker build -t ghcr.io/username/gpu-cluster-test:main .
+docker push ghcr.io/username/gpu-cluster-test:main
+```
+
+2. Update `scripts/import_image.sh` with your image URL:
+```bash
+IMAGE_URL="docker://ghcr.io#username/gpu-cluster-test:main"
+```
+
+3. Import and run:
+```bash
+./scripts/import_image.sh
+sbatch scripts/validate_clsuter.sh
+```
 
 ## Expected Output
 
