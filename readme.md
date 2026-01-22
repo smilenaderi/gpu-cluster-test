@@ -35,7 +35,7 @@ chmod +x gpu-test
 ./gpu-test nccl --nodes 2 --gpus-per-node 2
 
 # Interactive mode (see output in real-time)
-./gpu-test validate --nodes 2 --gpus-per-node 2 --interactive
+./gpu-test validate --nodes 2 --gpus-per-node 2 -i
 
 # CPU dry-run (no GPU needed)
 ./gpu-test validate --dry-run
@@ -78,7 +78,7 @@ Tests all NCCL collective operations (all_reduce, all_gather, broadcast, reduce_
 | `--gpus-per-node N` | GPUs per node | 8 |
 | `--epochs N` | Training epochs | 5 |
 | `--batch-size N` | Batch size per GPU | 64 |
-| `--interactive` | Run interactively (Slurm only) | false |
+| `-i, --interactive` | Run interactively with real-time output | false |
 | `--dry-run` | Test on CPU without GPU | false |
 
 ## Examples

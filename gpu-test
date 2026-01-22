@@ -76,7 +76,7 @@ while [[ $# -gt 0 ]]; do
             BATCH_SIZE="$2"
             shift 2
             ;;
-        --interactive)
+        -i|--interactive)
             INTERACTIVE=true
             shift
             ;;
@@ -119,7 +119,7 @@ OPTIONS:
   --gpus-per-node N      GPUs per node (default: 8)
   --epochs N             Training epochs (default: 5)
   --batch-size N         Batch size per GPU (default: 64)
-  --interactive          Run interactively (Slurm only)
+  -i, --interactive      Run interactively with real-time output
   --dry-run              Test on CPU without GPU
 
 EXAMPLES:
@@ -133,7 +133,7 @@ EXAMPLES:
   ./gpu-test nccl --nodes 2 --gpus-per-node 2
 
   # Interactive mode (see output in real-time)
-  ./gpu-test validate --nodes 2 --gpus-per-node 2 --interactive
+  ./gpu-test validate --nodes 2 --gpus-per-node 2 -i
 
   # CPU dry-run (no GPU needed)
   ./gpu-test validate --dry-run
