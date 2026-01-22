@@ -26,6 +26,18 @@ spec:
             app: gpu-acceptance-test
             role: master
         spec:
+          # Init container to clone the repository
+          initContainers:
+            - name: git-clone
+              image: alpine/git
+              command:
+                - sh
+                - -c
+                - |
+                  git clone https://github.com/smilenaderi/gpu-cluster-test.git /workspace
+              volumeMounts:
+                - name: code
+                  mountPath: /workspace
           containers:
             - name: pytorch
               image: pytorch/pytorch:2.4.0-cuda12.4-cudnn9-devel
@@ -40,7 +52,7 @@ spec:
                     --nproc_per_node=8 \
                     --rdzv_backend=c10d \
                     --rdzv_endpoint=$MASTER_ADDR:$MASTER_PORT \
-                    /workspace/src/train.py --epochs 5 --batch-size 64
+                    /workspace/gpu-cluster-test/src/train.py --epochs 5 --batch-size 64
               resources:
                 limits:
                   nvidia.com/gpu: 8
@@ -53,6 +65,9 @@ spec:
               volumeMounts:
                 - name: code
                   mountPath: /workspace
+              env:
+                - name: NCCL_DEBUG
+                  value: "INFO"
           volumes:
             - name: code
               emptyDir: {}
@@ -69,6 +84,18 @@ spec:
             app: gpu-acceptance-test
             role: worker
         spec:
+          # Init container to clone the repository
+          initContainers:
+            - name: git-clone
+              image: alpine/git
+              command:
+                - sh
+                - -c
+                - |
+                  git clone https://github.com/smilenaderi/gpu-cluster-test.git /workspace
+              volumeMounts:
+                - name: code
+                  mountPath: /workspace
           containers:
             - name: pytorch
               image: pytorch/pytorch:2.4.0-cuda12.4-cudnn9-devel
@@ -83,7 +110,7 @@ spec:
                     --nproc_per_node=8 \
                     --rdzv_backend=c10d \
                     --rdzv_endpoint=$MASTER_ADDR:$MASTER_PORT \
-                    /workspace/src/train.py --epochs 5 --batch-size 64
+                    /workspace/gpu-cluster-test/src/train.py --epochs 5 --batch-size 64
               resources:
                 limits:
                   nvidia.com/gpu: 8
@@ -96,6 +123,9 @@ spec:
               volumeMounts:
                 - name: code
                   mountPath: /workspace
+              env:
+                - name: NCCL_DEBUG
+                  value: "INFO"
           volumes:
             - name: code
               emptyDir: {}

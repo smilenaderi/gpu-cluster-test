@@ -56,6 +56,43 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test
           labels: ${{ steps.meta.outputs.labels }}
 
+      - name: 🔍 Validate Scripts
+        run: |
+          # Install shellcheck
+          sudo apt-get update && sudo apt-get install -y shellcheck
+          
+          # Check all shell scripts
+          echo "Running shellcheck on all scripts..."
+          shellcheck scripts/*.sh || echo "⚠️  Shellcheck warnings found (non-blocking)"
+          
+          # Verify scripts are executable
+          echo "Checking script permissions..."
+          for script in scripts/*.sh; do
+            if [ ! -x "$script" ]; then
+              echo "❌ Script not executable: $script"
+              exit 1
+            fi
+          done
+          echo "✅ All scripts are executable"
+
+      - name: 🔍 Test Container Structure
+        run: |
+          IMAGE_LOWER=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test" | tr '[:upper:]' '[:lower:]')
+          
+          echo "Testing container structure..."
+          docker run --rm $IMAGE_LOWER ls -la /workspace/src
+          
+          echo "Testing PyTorch installation..."
+          docker run --rm $IMAGE_LOWER python -c "import torch; print(f'PyTorch version: {torch.__version__}')"
+          
+          echo "Testing torchvision installation..."
+          docker run --rm $IMAGE_LOWER python -c "import torchvision; print(f'Torchvision version: {torchvision.__version__}')"
+          
+          echo "Testing CUDA availability (CPU mode)..."
+          docker run --rm $IMAGE_LOWER python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
+          
+          echo "✅ Container structure validated"
+
       - name: 🧪 Run Smoke Test (CPU Dry Run)
         run: |
           IMAGE_LOWER=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test" | tr '[:upper:]' '[:lower:]')

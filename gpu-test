@@ -1,0 +1,311 @@
+#!/bin/bash
+#
+# GPU Cluster Test - Universal CLI Tool
+#
+# A unified command-line interface for GPU cluster validation.
+# All output is displayed in real-time - no need to check log files.
+#
+# Usage: ./gpu-test <command> [options]
+#
+# Commands:
+#   validate    Run cluster validation test (distributed training)
+#   nccl        Run NCCL communication test
+#   help        Show this help message
+#
+# Options:
+#   --nodes N              Number of nodes (default: 2)
+#   --gpus-per-node N      GPUs per node (default: 8)
+#   --epochs N             Training epochs (default: 5)
+#   --batch-size N         Batch size per GPU (default: 64)
+#   --interactive          Run interactively (Slurm only)
+#   --dry-run              Test on CPU without GPU
+#
+# Examples:
+#   ./gpu-test validate --nodes 2 --gpus-per-node 2
+#   ./gpu-test nccl --nodes 4 --gpus-per-node 4
+#   ./gpu-test validate --nodes 1 --gpus-per-node 1 --interactive
+#   ./gpu-test validate --dry-run
+#
+
+set -euo pipefail
+
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Default configuration
+COMMAND=""
+NODES=2
+GPUS_PER_NODE=8
+EPOCHS=5
+BATCH_SIZE=64
+INTERACTIVE=false
+DRY_RUN=false
+
+# Parse command
+if [ $# -eq 0 ]; then
+    COMMAND="help"
+else
+    COMMAND="$1"
+    shift
+fi
+
+# Parse options
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --nodes)
+            NODES="$2"
+            shift 2
+            ;;
+        --gpus-per-node)
+            GPUS_PER_NODE="$2"
+            shift 2
+            ;;
+        --epochs)
+            EPOCHS="$2"
+            shift 2
+            ;;
+        --batch-size)
+            BATCH_SIZE="$2"
+            shift 2
+            ;;
+        --interactive)
+            INTERACTIVE=true
+            shift
+            ;;
+        --dry-run)
+            DRY_RUN=true
+            shift
+            ;;
+        --help|-h)
+            COMMAND="help"
+            shift
+            ;;
+        *)
+            echo -e "${RED}Error: Unknown option: $1${NC}"
+            echo "Use './gpu-test help' for usage information"
+            exit 1
+            ;;
+    esac
+done
+
+# Help function
+show_help() {
+    cat << EOF
+${BLUE}GPU Cluster Test - Universal CLI Tool${NC}
+
+A unified command-line interface for GPU cluster validation.
+All output is displayed in real-time - no need to check log files.
+
+${YELLOW}Usage:${NC}
+  ./gpu-test <command> [options]
+
+${YELLOW}Commands:${NC}
+  ${GREEN}validate${NC}    Run cluster validation test (distributed training)
+  ${GREEN}nccl${NC}        Run NCCL communication test
+  ${GREEN}help${NC}        Show this help message
+
+${YELLOW}Options:${NC}
+  --nodes N              Number of nodes (default: 2)
+  --gpus-per-node N      GPUs per node (default: 8)
+  --epochs N             Training epochs (default: 5)
+  --batch-size N         Batch size per GPU (default: 64)
+  --interactive          Run interactively (Slurm only)
+  --dry-run              Test on CPU without GPU
+
+${YELLOW}Examples:${NC}
+  ${GREEN}# Small cluster test (4 GPUs)${NC}
+  ./gpu-test validate --nodes 2 --gpus-per-node 2
+
+  ${GREEN}# Medium cluster test (16 GPUs)${NC}
+  ./gpu-test validate --nodes 4 --gpus-per-node 4 --epochs 10
+
+  ${GREEN}# NCCL communication test${NC}
+  ./gpu-test nccl --nodes 2 --gpus-per-node 2
+
+  ${GREEN}# Interactive mode (see output in real-time)${NC}
+  ./gpu-test validate --nodes 2 --gpus-per-node 2 --interactive
+
+  ${GREEN}# CPU dry-run (no GPU needed)${NC}
+  ./gpu-test validate --dry-run
+
+${YELLOW}Environment Detection:${NC}
+  The tool automatically detects your environment:
+  - Slurm: Uses srun/sbatch
+  - Kubernetes: Uses kubectl/PyTorchJob
+  - Standalone: Uses torchrun directly
+
+${YELLOW}Output:${NC}
+  All output is displayed in real-time. No need to check log files.
+  For batch jobs, logs are also saved to: logs/<test>_<job_id>.out
+
+EOF
+}
+
+# Detect environment
+detect_environment() {
+    if command -v sbatch &> /dev/null; then
+        echo "slurm"
+    elif command -v kubectl &> /dev/null && kubectl cluster-info &> /dev/null 2>&1; then
+        echo "kubernetes"
+    else
+        echo "standalone"
+    fi
+}
+
+# Run validation test
+run_validate() {
+    local env=$(detect_environment)
+    local total_gpus=$((NODES * GPUS_PER_NODE))
+    
+    echo -e "${BLUE}=========================================="
+    echo "GPU Cluster Validation Test"
+    echo -e "==========================================${NC}"
+    echo "Configuration:"
+    echo "  - Nodes: $NODES"
+    echo "  - GPUs per node: $GPUS_PER_NODE"
+    echo "  - Total GPUs: $total_gpus"
+    echo "  - Epochs: $EPOCHS"
+    echo "  - Batch size: $BATCH_SIZE"
+    echo "  - Environment: $env"
+    echo "  - Mode: $([ "$INTERACTIVE" = true ] && echo "Interactive" || echo "Batch")"
+    echo -e "${BLUE}==========================================${NC}"
+    echo ""
+    
+    if [ "$DRY_RUN" = true ]; then
+        echo -e "${YELLOW}Running CPU dry-run (no GPU required)...${NC}"
+        python src/train.py --dry-run --epochs "$EPOCHS"
+        return $?
+    fi
+    
+    case $env in
+        slurm)
+            if [ "$INTERACTIVE" = true ]; then
+                echo -e "${GREEN}Running interactively with srun...${NC}"
+                echo ""
+                ./scripts/run_acceptance.sh \
+                    --nodes "$NODES" \
+                    --gpus-per-node "$GPUS_PER_NODE" \
+                    --epochs "$EPOCHS" \
+                    --batch-size "$BATCH_SIZE"
+            else
+                echo -e "${GREEN}Submitting batch job with sbatch...${NC}"
+                echo ""
+                NODES=$NODES GPUS_PER_NODE=$GPUS_PER_NODE EPOCHS=$EPOCHS BATCH_SIZE=$BATCH_SIZE \
+                    sbatch --nodes="$NODES" --gpus-per-node="$GPUS_PER_NODE" scripts/validate_clsuter.sh
+                
+                echo ""
+                echo -e "${YELLOW}Job submitted. Monitor with:${NC}"
+                echo "  squeue -u \$USER"
+                echo "  tail -f logs/acceptance_*.out"
+            fi
+            ;;
+        kubernetes)
+            echo -e "${GREEN}Deploying to Kubernetes...${NC}"
+            echo ""
+            kubectl apply -f kubernetes-example.yaml
+            echo ""
+            echo -e "${YELLOW}Monitor with:${NC}"
+            echo "  kubectl get pytorchjobs"
+            echo "  kubectl logs -f <pod-name>"
+            ;;
+        standalone)
+            echo -e "${GREEN}Running with torchrun...${NC}"
+            echo ""
+            torchrun \
+                --nnodes="$NODES" \
+                --nproc_per_node="$GPUS_PER_NODE" \
+                src/train.py --epochs "$EPOCHS" --batch-size "$BATCH_SIZE"
+            ;;
+    esac
+}
+
+# Run NCCL test
+run_nccl() {
+    local env=$(detect_environment)
+    local total_gpus=$((NODES * GPUS_PER_NODE))
+    
+    echo -e "${BLUE}=========================================="
+    echo "NCCL Communication Test"
+    echo -e "==========================================${NC}"
+    echo "Configuration:"
+    echo "  - Nodes: $NODES"
+    echo "  - GPUs per node: $GPUS_PER_NODE"
+    echo "  - Total GPUs: $total_gpus"
+    echo "  - Environment: $env"
+    echo "  - Mode: $([ "$INTERACTIVE" = true ] && echo "Interactive" || echo "Batch")"
+    echo -e "${BLUE}==========================================${NC}"
+    echo ""
+    
+    case $env in
+        slurm)
+            if [ "$INTERACTIVE" = true ]; then
+                echo -e "${GREEN}Running interactively with srun...${NC}"
+                echo ""
+                # Get master node
+                MASTER_IP=$(sinfo -N -h | awk '{print $1}' | head -n 1)
+                MASTER_PORT=29500
+                
+                srun --nodes="$NODES" \
+                     --gpus-per-node="$GPUS_PER_NODE" \
+                     --ntasks-per-node=1 \
+                     bash -c "torchrun \
+                         --nnodes=$NODES \
+                         --nproc_per_node=$GPUS_PER_NODE \
+                         --rdzv_id=\$RANDOM \
+                         --rdzv_backend=c10d \
+                         --rdzv_endpoint=$MASTER_IP:$MASTER_PORT \
+                         $SCRIPT_DIR/src/nccl_test.py"
+            else
+                echo -e "${GREEN}Submitting batch job with sbatch...${NC}"
+                echo ""
+                NODES=$NODES GPUS_PER_NODE=$GPUS_PER_NODE \
+                    sbatch --nodes="$NODES" --gpus-per-node="$GPUS_PER_NODE" scripts/nccl_test.sh
+                
+                echo ""
+                echo -e "${YELLOW}Job submitted. Monitor with:${NC}"
+                echo "  squeue -u \$USER"
+                echo "  tail -f logs/nccl_*.out"
+            fi
+            ;;
+        kubernetes)
+            echo -e "${YELLOW}Note: NCCL test for Kubernetes not yet implemented${NC}"
+            echo "Use: kubectl apply -f kubernetes-example.yaml"
+            ;;
+        standalone)
+            echo -e "${GREEN}Running with torchrun...${NC}"
+            echo ""
+            torchrun \
+                --nnodes="$NODES" \
+                --nproc_per_node="$GPUS_PER_NODE" \
+                src/nccl_test.py
+            ;;
+    esac
+}
+
+# Main command dispatcher
+case $COMMAND in
+    validate)
+        run_validate
+        ;;
+    nccl)
+        run_nccl
+        ;;
+    help|--help|-h)
+        show_help
+        ;;
+    *)
+        echo -e "${RED}Error: Unknown command: $COMMAND${NC}"
+        echo ""
+        echo "Available commands: validate, nccl, help"
+        echo "Use './gpu-test help' for more information"
+        exit 1
+        ;;
+esac

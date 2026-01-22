@@ -1,15 +1,138 @@
 # GPU Cluster Acceptance Test
 
-A distributed PyTorch DDP acceptance test suite for validating GPU cluster configurations. This tool verifies that your Kubernetes or Slurm cluster nodes are correctly configured, GPUs are accessible, and NCCL (inter-GPU communication) is working properly.
+A unified command-line tool for validating GPU cluster configurations. Tests distributed training with PyTorch DDP and NCCL communication across multiple nodes and GPUs.
 
-## Overview
+## Features
 
-This project provides a lightweight acceptance test that:
-- Validates multi-node GPU cluster setup
-- Tests distributed training with PyTorch DDP
-- Verifies NCCL communication between GPUs
-- Uses synthetic data to avoid external dependencies
-- Supports Slurm, Kubernetes, and Docker environments
+✅ **Unified CLI** - Single command-line tool for all operations  
+✅ **Real-time Output** - See results immediately, no log file hunting  
+✅ **Flexible Configuration** - Run with any number of nodes and GPUs  
+✅ **Multiple Platforms** - Slurm, Kubernetes, Docker, standalone VMs  
+✅ **Comprehensive Testing** - Training + NCCL collective operations  
+✅ **No Dependencies** - Uses synthetic data, no downloads required  
+
+## Quick Start
+
+### Installation
+
+```bash
+cd /shared
+git clone https://github.com/smilenaderi/gpu-cluster-test.git
+cd gpu-cluster-test
+chmod +x gpu-test
+```
+
+### Basic Usage
+
+```bash
+# Show help
+./gpu-test help
+
+# Run cluster validation test (2 nodes × 2 GPUs)
+./gpu-test validate --nodes 2 --gpus-per-node 2
+
+# Run NCCL communication test
+./gpu-test nccl --nodes 2 --gpus-per-node 2
+
+# Interactive mode (see output in real-time)
+./gpu-test validate --nodes 2 --gpus-per-node 2 --interactive
+
+# CPU dry-run (no GPU needed)
+./gpu-test validate --dry-run
+```
+
+## Commands
+
+### `validate` - Cluster Validation Test
+
+Tests distributed training with PyTorch DDP to verify your cluster is properly configured.
+
+```bash
+# Small cluster (4 GPUs)
+./gpu-test validate --nodes 2 --gpus-per-node 2
+
+# Medium cluster (16 GPUs)
+./gpu-test validate --nodes 4 --gpus-per-node 4 --epochs 10
+
+# Large cluster (64 GPUs)
+./gpu-test validate --nodes 8 --gpus-per-node 8 --epochs 20
+```
+
+### `nccl` - NCCL Communication Test
+
+Tests all NCCL collective operations (all_reduce, all_gather, broadcast, reduce_scatter) to verify inter-GPU communication.
+
+```bash
+# Test 2 nodes × 2 GPUs
+./gpu-test nccl --nodes 2 --gpus-per-node 2
+
+# Test 4 nodes × 4 GPUs
+./gpu-test nccl --nodes 4 --gpus-per-node 4
+```
+
+## Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--nodes N` | Number of nodes | 2 |
+| `--gpus-per-node N` | GPUs per node | 8 |
+| `--epochs N` | Training epochs | 5 |
+| `--batch-size N` | Batch size per GPU | 64 |
+| `--interactive` | Run interactively (Slurm only) | false |
+| `--dry-run` | Test on CPU without GPU | false |
+
+## Examples
+
+### Development Testing
+
+```bash
+# Quick test with minimal resources
+./gpu-test validate --nodes 1 --gpus-per-node 1 --epochs 2
+
+# CPU test (no GPU needed)
+./gpu-test validate --dry-run
+```
+
+### Production Validation
+
+```bash
+# Standard acceptance test
+./gpu-test validate --nodes 2 --gpus-per-node 4 --epochs 10
+
+# NCCL communication test
+./gpu-test nccl --nodes 2 --gpus-per-node 4
+```
+
+### Large Scale Testing
+
+```bash
+# High-performance cluster validation
+./gpu-test validate --nodes 8 --gpus-per-node 8 --epochs 20 --batch-size 256
+```
+
+## Environment Detection
+
+The tool automatically detects your environment:
+
+- **Slurm**: Uses `srun` (interactive) or `sbatch` (batch)
+- **Kubernetes**: Uses `kubectl` and PyTorchJob operator
+- **Standalone**: Uses `torchrun` directly
+
+## Output
+
+All output is displayed in real-time. No need to check log files manually.
+
+For batch jobs on Slurm, logs are also saved to:
+- `logs/acceptance_<job_id>.out` - Validation test output
+- `logs/nccl_<job_id>.out` - NCCL test output
+
+Monitor batch jobs:
+```bash
+squeue -u $USER
+tail -f logs/acceptance_*.out
+```
+
+---
 
 ## Project Structure
 
@@ -40,132 +163,85 @@ gpu-cluster-test/
 
 ## Quick Start
 
+### Advanced Usage
 
-##  Setup GPU Cluster Test
+### Direct Script Access
+
+If you prefer to use the underlying scripts directly:
+
+**Slurm Batch Jobs:**
 ```bash
-cd /shared
-git clone https://github.com/smilenaderi/gpu-cluster-test.git
-cd gpu-cluster-test
-chmod +x scripts/run_acceptance.sh
-./scripts/run_acceptance.sh
+# Validation test
+sbatch --nodes=2 --gpus-per-node=2 scripts/validate_clsuter.sh
+
+# NCCL test
+sbatch --nodes=2 --gpus-per-node=2 scripts/nccl_test.sh
+
+# With environment variables
+NODES=4 GPUS_PER_NODE=4 EPOCHS=10 sbatch scripts/validate_clsuter.sh
 ```
 
-### Option 1: Slurm (Interactive)
-
-Run interactively with real-time output:
-
+**Slurm Interactive:**
 ```bash
-chmod +x scripts/run_acceptance.sh
-./scripts/run_acceptance.sh
+./scripts/run_acceptance.sh --nodes 2 --gpus-per-node 2 --epochs 5
 ```
 
-### Option 2: Slurm (Custom Image from GHCR)
-
-First, import your custom Docker image from GitHub Container Registry:
-
+**Kubernetes:**
 ```bash
-cd /shared/gpu-cluster-test
-./scripts/import_image.sh
+kubectl apply -f kubernetes-example.yaml
+kubectl get pytorchjobs
+kubectl logs -f <pod-name>
 ```
 
-This will download and convert the image to `images/smilenaderi+gpu-cluster-test+main.sqsh`. Then submit the job:
-
-```bash
-sbatch scripts/validate_clsuter.sh
-```
-
-Monitor the job:
-
-```bash
-squeue -u $USER
-tail -f logs/acceptance_<job_id>.out
-```
-
-### Option 3: NCCL Collective Operations Test
-
-Test NCCL all_reduce, all_gather, broadcast, and reduce_scatter:
-
-```bash
-sbatch scripts/nccl_test.sh
-```
-
-This verifies that inter-GPU communication is working correctly by:
-- Testing all_reduce SUM across all GPUs
-- Testing all_gather to collect data from all ranks
-- Testing broadcast from rank 0
-- Testing reduce_scatter operations
-
-### Option 4: Docker (Single Node)
-
-Test on a single node with multiple GPUs:
-
+**Docker (Single Node):**
 ```bash
 docker run --gpus all --rm --ipc=host \
   -v $(pwd):/workspace/project \
   pytorch/pytorch:2.4.0-cuda12.4-cudnn9-devel \
   bash -c "pip install -q torchvision && \
-  torchrun --nproc_per_node=8 /workspace/project/src/train.py --epochs 5"
+  torchrun --nproc_per_node=2 /workspace/project/src/train.py --epochs 5"
 ```
 
-### Option 5: Kubernetes (Kubeflow)
+### Python Scripts
 
-Deploy using PyTorch Operator:
-
-```yaml
-apiVersion: kubeflow.org/v1
-kind: PyTorchJob
-metadata:
-  name: gpu-acceptance-test
-spec:
-  pytorchReplicaSpecs:
-    Worker:
-      replicas: 2
-      template:
-        spec:
-          containers:
-            - name: pytorch
-              image: pytorch/pytorch:2.4.0-cuda12.4-cudnn9-devel
-              command: 
-                - "torchrun"
-                - "--nnodes=2"
-                - "--nproc_per_node=8"
-                - "/workspace/src/train.py"
-                - "--epochs=5"
-              resources:
-                limits:
-                  nvidia.com/gpu: 8
-          restartPolicy: OnFailure
-```
-
-Apply the manifest:
+Run tests directly with Python:
 
 ```bash
-kubectl apply -f pytorch-job.yaml
-kubectl logs -f <pod-name>
+# CPU dry-run (no GPU required)
+python src/train.py --dry-run --epochs 2
+
+# Single GPU
+python src/train.py --epochs 2
+
+# Multi-GPU (single node)
+torchrun --nproc_per_node=2 src/train.py --epochs 5
+
+# NCCL test
+torchrun --nproc_per_node=2 src/nccl_test.py
 ```
 
 ## Configuration
 
-### Training Parameters
+### Environment Variables
 
-Edit `src/train.py` or pass command-line arguments:
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `MASTER_ADDR` | Master node IP address | auto-detect | No |
+| `MASTER_PORT` | Communication port | 29500 | No |
+| `WORLD_SIZE` | Total number of processes | auto | No |
+| `RANK` | Process rank (0 to WORLD_SIZE-1) | auto | No |
+| `LOCAL_RANK` | Local process rank on node | auto | No |
+| `NODES` | Number of nodes | 2 | No |
+| `GPUS_PER_NODE` | GPUs per node | 8 | No |
+| `EPOCHS` | Training epochs | 5 | No |
+| `BATCH_SIZE` | Batch size per GPU | 64 | No |
+| `CONTAINER_IMAGE` | Container image path | (varies) | No |
+| `PROJECT_PATH` | Project mount path | /shared/gpu-cluster-test | No |
 
-```bash
-python src/train.py --epochs 10 --batch-size 64
-```
-
-Available options:
-- `--epochs`: Number of training epochs (default: 2)
-- `--batch-size`: Batch size per GPU (default: 32)
-- `--dry-run`: Run on CPU for testing (no GPU required)
-
-### Slurm Configuration
-
-Edit `scripts/run_acceptance.sh` or `scripts/validate_clsuter.sh` to adjust:
-- `--nodes`: Number of nodes (default: 2)
-- `--gpus-per-node`: GPUs per node (default: 8)
-- `--time`: Job time limit (default: 00:20:00)
-- `--partition`: Slurm partition name
+**Note:** `MASTER_ADDR`, `WORLD_SIZE`, `RANK`, and `LOCAL_RANK` are automatically set by:
+- Slurm (via `torchrun`)
+- Kubernetes PyTorchJob operator
+- Manual setup for standalone VMs
 
 ### Custom Image Configuration
 
@@ -186,6 +262,85 @@ IMAGE_URL="docker://ghcr.io#username/gpu-cluster-test:main"
 ```bash
 ./scripts/import_image.sh
 sbatch scripts/validate_clsuter.sh
+```
+
+Or use directly:
+```bash
+./scripts/run_acceptance.sh --container ghcr.io/username/gpu-cluster-test:main
+```
+
+## Configuration
+
+### Command-Line Options
+
+All scripts support flexible configuration via command-line arguments:
+
+**Training Parameters:**
+```bash
+python src/train.py --epochs 10 --batch-size 64 --dry-run
+```
+- `--epochs`: Number of training epochs (default: 2)
+- `--batch-size`: Batch size per GPU (default: 32)
+- `--dry-run`: Run on CPU for testing (no GPU required)
+
+**Launcher Options:**
+```bash
+./scripts/run_acceptance.sh --nodes 4 --gpus-per-node 4 --epochs 10 --batch-size 128
+```
+- `--nodes`: Number of nodes (default: 2)
+- `--gpus-per-node`: GPUs per node (default: 8)
+- `--epochs`: Training epochs (default: 5)
+- `--batch-size`: Batch size per GPU (default: 64)
+- `--partition`: Slurm partition name (default: main)
+- `--container`: Container image to use
+- `--project-path`: Project mount path (default: /shared/gpu-cluster-test)
+- `--master-port`: Master communication port (default: 29500)
+
+### Environment Variables Reference
+
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `MASTER_ADDR` | Master node IP address | auto-detect | No |
+| `MASTER_PORT` | Communication port | 29500 | No |
+| `WORLD_SIZE` | Total number of processes | auto | No |
+| `RANK` | Process rank (0 to WORLD_SIZE-1) | auto | No |
+| `LOCAL_RANK` | Local process rank on node | auto | No |
+| `NODES` | Number of nodes | 2 | No |
+| `GPUS_PER_NODE` | GPUs per node | 8 | No |
+| `EPOCHS` | Training epochs | 5 | No |
+| `BATCH_SIZE` | Batch size per GPU | 64 | No |
+| `CONTAINER_IMAGE` | Container image path | (varies) | No |
+| `PROJECT_PATH` | Project mount path | /shared/gpu-cluster-test | No |
+
+**Note:** `MASTER_ADDR`, `WORLD_SIZE`, `RANK`, and `LOCAL_RANK` are automatically set by:
+- Slurm (via `torchrun`)
+- Kubernetes PyTorchJob operator
+- Manual setup for standalone VMs
+
+### Custom Image Configuration
+
+To use your own Docker image from GitHub Container Registry:
+
+1. Build and push your image to GHCR:
+```bash
+docker build -t ghcr.io/username/gpu-cluster-test:main .
+docker push ghcr.io/username/gpu-cluster-test:main
+```
+
+2. Update `scripts/import_image.sh` with your image URL:
+```bash
+IMAGE_URL="docker://ghcr.io#username/gpu-cluster-test:main"
+```
+
+3. Import and run:
+```bash
+./scripts/import_image.sh
+sbatch scripts/validate_clsuter.sh
+```
+
+Or use directly:
+```bash
+./scripts/run_acceptance.sh --container ghcr.io/username/gpu-cluster-test:main
 ```
 
 ## Expected Output
@@ -252,4 +407,23 @@ docker run --gpus all --rm gpu-cluster-test:latest --help
 ## License
 
 This project is provided as-is for cluster validation purposes.
+
+---
+
+## Summary
+
+The GPU cluster test provides a unified CLI tool (`./gpu-test`) for validating GPU clusters:
+
+- **Simple**: Single command for all operations
+- **Real-time**: See output immediately, no log file hunting
+- **Flexible**: Works with any cluster size (1×1 to 8×8+ GPUs)
+- **Portable**: Runs on Slurm, Kubernetes, Docker, standalone VMs
+
+Quick start:
+```bash
+./gpu-test validate --nodes 2 --gpus-per-node 2
+./gpu-test nccl --nodes 2 --gpus-per-node 2
+```
+
+For advanced usage, see the scripts in `scripts/` directory.
 
