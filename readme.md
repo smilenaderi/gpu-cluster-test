@@ -62,12 +62,18 @@ Tests distributed training with PyTorch DDP to verify your cluster is properly c
 
 Tests all NCCL collective operations (all_reduce, all_gather, broadcast, reduce_scatter) to verify inter-GPU communication.
 
+**Note:** For multi-node tests, batch mode is recommended. Interactive mode (`-i`) is not supported for NCCL tests.
+
 ```bash
-# Test 2 nodes × 2 GPUs
+# Test 2 nodes × 2 GPUs (batch mode)
 ./gpu-test nccl --nodes 2 --gpus-per-node 2
 
 # Test 4 nodes × 4 GPUs
 ./gpu-test nccl --nodes 4 --gpus-per-node 4
+
+# Monitor the job
+squeue -u $USER
+tail -f logs/nccl_*.out
 ```
 
 ## Options
@@ -78,7 +84,7 @@ Tests all NCCL collective operations (all_reduce, all_gather, broadcast, reduce_
 | `--gpus-per-node N` | GPUs per node | 8 |
 | `--epochs N` | Training epochs | 5 |
 | `--batch-size N` | Batch size per GPU | 64 |
-| `-i, --interactive` | Run interactively with real-time output | false |
+| `-i, --interactive` | Run interactively with real-time output (validate only) | false |
 | `--dry-run` | Test on CPU without GPU | false |
 
 ## Examples

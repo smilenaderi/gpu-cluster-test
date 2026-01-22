@@ -119,7 +119,7 @@ OPTIONS:
   --gpus-per-node N      GPUs per node (default: 8)
   --epochs N             Training epochs (default: 5)
   --batch-size N         Batch size per GPU (default: 64)
-  -i, --interactive      Run interactively with real-time output
+  -i, --interactive      Run interactively with real-time output (validate only)
   --dry-run              Test on CPU without GPU
 
 EXAMPLES:
@@ -250,33 +250,21 @@ run_nccl() {
     case $env in
         slurm)
             if [ "$INTERACTIVE" = true ]; then
-                echo "Running interactively with srun..."
+                echo "Note: Interactive mode for NCCL test is not recommended for multi-node."
+                echo "      Use batch mode instead: ./gpu-test nccl --nodes $NODES --gpus-per-node $GPUS_PER_NODE"
                 echo ""
-                # Get master node
-                MASTER_IP=$(sinfo -N -h | awk '{print $1}' | head -n 1)
-                MASTER_PORT=29500
-                
-                srun --nodes="$NODES" \
-                     --gpus-per-node="$GPUS_PER_NODE" \
-                     --ntasks-per-node=1 \
-                     bash -c "torchrun \
-                         --nnodes=$NODES \
-                         --nproc_per_node=$GPUS_PER_NODE \
-                         --rdzv_id=\$RANDOM \
-                         --rdzv_backend=c10d \
-                         --rdzv_endpoint=$MASTER_IP:$MASTER_PORT \
-                         $SCRIPT_DIR/src/nccl_test.py"
-            else
-                echo "Submitting batch job with sbatch..."
+                echo "Submitting as batch job..."
                 echo ""
-                NODES=$NODES GPUS_PER_NODE=$GPUS_PER_NODE \
-                    sbatch --nodes="$NODES" --gpus-per-node="$GPUS_PER_NODE" scripts/nccl_test.sh
-                
-                echo ""
-                echo "Job submitted. Monitor with:"
-                echo "  squeue -u \$USER"
-                echo "  tail -f logs/nccl_*.out"
             fi
+            
+            # Always use batch mode for NCCL multi-node tests
+            NODES=$NODES GPUS_PER_NODE=$GPUS_PER_NODE \
+                sbatch --nodes="$NODES" --gpus-per-node="$GPUS_PER_NODE" scripts/nccl_test.sh
+            
+            echo ""
+            echo "Job submitted. Monitor with:"
+            echo "  squeue -u \$USER"
+            echo "  tail -f logs/nccl_*.out"
             ;;
         kubernetes)
             echo "Note: NCCL test for Kubernetes not yet implemented"
