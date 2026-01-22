@@ -80,16 +80,16 @@ jobs:
           IMAGE_LOWER=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test" | tr '[:upper:]' '[:lower:]')
           
           echo "Testing container structure..."
-          docker run --rm $IMAGE_LOWER ls -la /workspace/src
+          docker run --rm --entrypoint ls $IMAGE_LOWER -la /workspace/src
           
           echo "Testing PyTorch installation..."
-          docker run --rm $IMAGE_LOWER python -c "import torch; print(f'PyTorch version: {torch.__version__}')"
+          docker run --rm --entrypoint python $IMAGE_LOWER -c "import torch; print(f'PyTorch version: {torch.__version__}')"
           
           echo "Testing torchvision installation..."
-          docker run --rm $IMAGE_LOWER python -c "import torchvision; print(f'Torchvision version: {torchvision.__version__}')"
+          docker run --rm --entrypoint python $IMAGE_LOWER -c "import torchvision; print(f'Torchvision version: {torchvision.__version__}')"
           
           echo "Testing CUDA availability (CPU mode)..."
-          docker run --rm $IMAGE_LOWER python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
+          docker run --rm --entrypoint python $IMAGE_LOWER -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
           
           echo "✅ Container structure validated"
 
