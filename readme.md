@@ -2,6 +2,10 @@
 
 A unified command-line tool for validating GPU cluster configurations. Tests distributed training with PyTorch DDP and NCCL communication across multiple nodes and GPUs.
 
+## Getting Started
+
+
+
 ## Features
 
 ✅ **Unified CLI** - Single command-line tool for all operations  
@@ -20,6 +24,17 @@ cd /shared
 git clone https://github.com/smilenaderi/gpu-cluster-test.git
 cd gpu-cluster-test
 chmod +x gpu-test
+```
+
+
+To get the image locally and run the cluster validation:
+
+```bash
+# Import the container image
+./scripts/import_image.sh
+
+# Run the validation test
+sbatch scripts/validate_clsuter.sh
 ```
 
 ### Basic Usage
