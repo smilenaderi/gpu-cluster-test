@@ -127,13 +127,13 @@ echo "=========================================="
 # Resolve the master node IP - Make it environment-agnostic
 if command -v scontrol &> /dev/null; then
     # Slurm environment
-    if [ -n "$SLURM_JOB_NODELIST" ]; then
+    if [ -n "${SLURM_JOB_NODELIST:-}" ]; then
         MASTER_IP=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
     else
         # Get first available node from partition
         MASTER_IP=$(sinfo -N -h -p $PARTITION | awk '{print $1}' | head -n 1)
     fi
-elif [ -n "$MASTER_ADDR" ]; then
+elif [ -n "${MASTER_ADDR:-}" ]; then
     # Kubernetes/PyTorchJob sets this automatically
     MASTER_IP=$MASTER_ADDR
 else
