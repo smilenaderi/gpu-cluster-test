@@ -17,10 +17,12 @@ This project provides a lightweight acceptance test that:
 gpu-cluster-test/
 ├── src/
 │   ├── train.py              # Main training script with DDP
+│   ├── nccl_test.py          # NCCL collective operations test
 │   └── requirements.txt      # Python dependencies
 ├── scripts/
 │   ├── run_acceptance.sh     # Interactive Slurm launcher
 │   ├── validate_clsuter.sh   # Slurm job with custom image
+│   ├── nccl_test.sh          # NCCL operations test job
 │   └── import_image.sh       # Import custom image from GHCR
 ├── images/                   # Container images (.sqsh files)
 ├── logs/                     # Job output logs
@@ -79,7 +81,21 @@ squeue -u $USER
 tail -f logs/acceptance_<job_id>.out
 ```
 
-### Option 3: Docker (Single Node)
+### Option 3: NCCL Collective Operations Test
+
+Test NCCL all_reduce, all_gather, broadcast, and reduce_scatter:
+
+```bash
+sbatch scripts/nccl_test.sh
+```
+
+This verifies that inter-GPU communication is working correctly by:
+- Testing all_reduce SUM across all GPUs
+- Testing all_gather to collect data from all ranks
+- Testing broadcast from rank 0
+- Testing reduce_scatter operations
+
+### Option 4: Docker (Single Node)
 
 Test on a single node with multiple GPUs:
 
@@ -91,7 +107,7 @@ docker run --gpus all --rm --ipc=host \
   torchrun --nproc_per_node=8 /workspace/project/src/train.py --epochs 5"
 ```
 
-### Option 4: Kubernetes (Kubeflow)
+### Option 5: Kubernetes (Kubeflow)
 
 Deploy using PyTorch Operator:
 
