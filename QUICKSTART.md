@@ -1,5 +1,17 @@
 # GPU Cluster Test - Usage Guide
 
+## ⚠️ Important: Slurm Cluster Setup
+
+**If you're using Slurm with Enroot/Pyxis**, you must import the container image first:
+https://github.com/NVIDIA/pyxis/issues/70
+
+```bash
+# Import the container image locally (REQUIRED for Slurm)
+./gpu-test import
+```
+
+Run this command **before** any validation or NCCL tests on Slurm clusters.
+
 ## Quick Reference
 
 ### Installation
@@ -15,6 +27,9 @@ chmod +x gpu-test
 # Show help
 ./gpu-test help
 
+# Import container image (REQUIRED FIRST for Slurm clusters)
+./gpu-test import
+
 # Validate cluster (2 nodes × 2 GPUs)
 ./gpu-test validate --nodes 2 --gpus-per-node 2
 
@@ -26,12 +41,21 @@ chmod +x gpu-test
 
 # CPU test (no GPU needed)
 ./gpu-test validate --dry-run
-
-# Import custom Docker image
-./gpu-test import
 ```
 
 ## Commands
+
+### `import` - Import Container Image (Run This First!)
+
+**⚠️ Required for Slurm clusters** - Import the container image locally before running tests.
+
+**Example:**
+```bash
+# Import the container image from GitHub Container Registry
+./gpu-test import
+```
+
+This is necessary due to a known issue where Slurm clusters cannot access external Docker repositories directly. The command downloads and converts the image to Enroot format for local use.
 
 ### `validate` - Cluster Validation
 Tests distributed training with PyTorch DDP.
@@ -58,15 +82,6 @@ Tests all NCCL collective operations.
 
 # Test 4 nodes × 4 GPUs
 ./gpu-test nccl --nodes 4 --gpus-per-node 4
-```
-
-### `import` - Import Custom Docker Image
-Import the custom Docker image from GHCR for use with containers.
-
-**Example:**
-```bash
-# Import the container image
-./gpu-test import
 ```
 
 ## Options
@@ -209,8 +224,8 @@ gpu-cluster-test/
 
 ## Best Practices
 
-1. **Start small**: Test with 1-2 nodes first
-2. **Import image first**: Run `./gpu-test import` if using custom containers
+1. **Import image first**: Run `./gpu-test import` before any tests on Slurm clusters
+2. **Start small**: Test with 1-2 nodes first
 3. **Run NCCL test**: Verify communication before training
 4. **Use interactive mode**: For debugging and development
 5. **Monitor resources**: Check GPU memory and utilization

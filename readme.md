@@ -2,6 +2,17 @@
 
 A unified command-line tool for validating GPU cluster configurations. Tests distributed training with PyTorch DDP and NCCL communication across multiple nodes and GPUs.
 
+
+**If you're using Slurm with Enroot/Pyxis**, you must import the container image first:
+https://github.com/NVIDIA/pyxis/issues/70
+
+```bash
+# Import the container image locally (required for Slurm)
+./gpu-test import
+```
+
+This downloads the image from GitHub Container Registry and prepares it for local use with Enroot. Run this command **before** running any validation or NCCL tests on Slurm clusters.
+
 ## Quick Start
 
 ### Installation
@@ -19,6 +30,9 @@ chmod +x gpu-test
 # Show help
 ./gpu-test help
 
+# Import container image (REQUIRED FIRST for Slurm clusters)
+./gpu-test import
+
 # Run cluster validation test (2 nodes × 2 GPUs)
 ./gpu-test validate --nodes 2 --gpus-per-node 2
 
@@ -30,9 +44,6 @@ chmod +x gpu-test
 
 # CPU dry-run (no GPU needed)
 ./gpu-test validate --dry-run
-
-# Import custom Docker image (if using containers)
-./gpu-test import
 ```
 
 ## Features
@@ -47,6 +58,26 @@ chmod +x gpu-test
 ## Getting Started
 
 ## Commands
+
+### `import` - Import Container Image (Run This First!)
+
+**⚠️ Required for Slurm clusters** - Import the container image locally before running tests. This is necessary due to a known issue where Slurm clusters cannot access external Docker repositories directly.
+
+```bash
+# Import the container image from GitHub Container Registry
+./gpu-test import
+```
+
+This command:
+- Downloads the image from `ghcr.io/smilenaderi/gpu-cluster-test:main`
+- Converts it to Enroot format (`.sqsh` file)
+- Stores it locally in the `images/` directory
+- Makes it available for all subsequent test runs
+
+**When to run:**
+- Before your first validation or NCCL test
+- After updating the container image
+- If you see "image not found" errors
 
 ### `validate` - Cluster Validation Test
 
@@ -80,17 +111,6 @@ Tests all NCCL collective operations (all_reduce, all_gather, broadcast, reduce_
 squeue -u $USER
 tail -f logs/nccl_*.out
 ```
-
-### `import` - Import Custom Docker Image
-
-Import the custom Docker image from GitHub Container Registry for use with Slurm containers.
-
-```bash
-# Import the container image
-./gpu-test import
-```
-
-This downloads and prepares the image for use in validation tests.
 
 ## Options
 
@@ -454,9 +474,9 @@ The GPU cluster test provides a unified CLI tool (`./gpu-test`) for validating G
 
 Quick start:
 ```bash
+./gpu-test import                                    # Run this FIRST on Slurm clusters
 ./gpu-test validate --nodes 2 --gpus-per-node 2
 ./gpu-test nccl --nodes 2 --gpus-per-node 2
-./gpu-test import  # If using custom containers
 ```
 
 The `./gpu-test` tool is the recommended way to use this project. For advanced use cases, you can access the underlying scripts in the `scripts/` directory.
