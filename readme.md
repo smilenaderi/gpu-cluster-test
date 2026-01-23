@@ -2,19 +2,6 @@
 
 A unified command-line tool for validating GPU cluster configurations. Tests distributed training with PyTorch DDP and NCCL communication across multiple nodes and GPUs.
 
-## Getting Started
-
-
-
-## Features
-
-✅ **Unified CLI** - Single command-line tool for all operations  
-✅ **Real-time Output** - See results immediately, no log file hunting  
-✅ **Flexible Configuration** - Run with any number of nodes and GPUs  
-✅ **Multiple Platforms** - Slurm, Kubernetes, Docker, standalone VMs  
-✅ **Comprehensive Testing** - Training + NCCL collective operations  
-✅ **No Dependencies** - Uses synthetic data, no downloads required  
-
 ## Quick Start
 
 ### Installation
@@ -24,17 +11,6 @@ cd /shared
 git clone https://github.com/smilenaderi/gpu-cluster-test.git
 cd gpu-cluster-test
 chmod +x gpu-test
-```
-
-
-To get the image locally and run the cluster validation:
-
-```bash
-# Import the container image
-./scripts/import_image.sh
-
-# Run the validation test
-sbatch scripts/validate_clsuter.sh
 ```
 
 ### Basic Usage
@@ -54,7 +30,21 @@ sbatch scripts/validate_clsuter.sh
 
 # CPU dry-run (no GPU needed)
 ./gpu-test validate --dry-run
+
+# Import custom Docker image (if using containers)
+./gpu-test import
 ```
+
+## Features
+
+✅ **Unified CLI** - Single command-line tool for all operations  
+✅ **Real-time Output** - See results immediately, no log file hunting  
+✅ **Flexible Configuration** - Run with any number of nodes and GPUs  
+✅ **Multiple Platforms** - Slurm, Kubernetes, Docker, standalone VMs  
+✅ **Comprehensive Testing** - Training + NCCL collective operations  
+✅ **No Dependencies** - Uses synthetic data, no downloads required  
+
+## Getting Started
 
 ## Commands
 
@@ -90,6 +80,17 @@ Tests all NCCL collective operations (all_reduce, all_gather, broadcast, reduce_
 squeue -u $USER
 tail -f logs/nccl_*.out
 ```
+
+### `import` - Import Custom Docker Image
+
+Import the custom Docker image from GitHub Container Registry for use with Slurm containers.
+
+```bash
+# Import the container image
+./gpu-test import
+```
+
+This downloads and prepares the image for use in validation tests.
 
 ## Options
 
@@ -182,11 +183,21 @@ gpu-cluster-test/
 - For Kubernetes: Kubeflow PyTorch Operator
 - For Docker: Docker with NVIDIA Container Toolkit
 
-## Quick Start
+## Advanced Usage
 
-### Advanced Usage
+### Using Custom Container Images
 
-### Direct Script Access
+If you need to use a custom Docker image with additional dependencies:
+
+```bash
+# Import the container image
+./gpu-test import
+
+# Or manually import with enroot
+./scripts/import_image.sh
+```
+
+### Direct Script Access (Advanced Users)
 
 If you prefer to use the underlying scripts directly:
 
@@ -436,7 +447,8 @@ This project is provided as-is for cluster validation purposes.
 The GPU cluster test provides a unified CLI tool (`./gpu-test`) for validating GPU clusters:
 
 - **Simple**: Single command for all operations
-- **Real-time**: See output immediately, no log file hunting
+- **Complete**: Handles validation, NCCL testing, and image management
+- **Reliable**: Real-time output, no log file hunting
 - **Flexible**: Works with any cluster size (1×1 to 8×8+ GPUs)
 - **Portable**: Runs on Slurm, Kubernetes, Docker, standalone VMs
 
@@ -444,7 +456,8 @@ Quick start:
 ```bash
 ./gpu-test validate --nodes 2 --gpus-per-node 2
 ./gpu-test nccl --nodes 2 --gpus-per-node 2
+./gpu-test import  # If using custom containers
 ```
 
-For advanced usage, see the scripts in `scripts/` directory.
+The `./gpu-test` tool is the recommended way to use this project. For advanced use cases, you can access the underlying scripts in the `scripts/` directory.
 

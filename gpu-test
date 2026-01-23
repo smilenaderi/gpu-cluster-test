@@ -10,6 +10,7 @@
 # Commands:
 #   validate    Run cluster validation test (distributed training)
 #   nccl        Run NCCL communication test
+#   import      Import custom Docker image from GHCR
 #   help        Show this help message
 #
 # Options:
@@ -112,6 +113,7 @@ USAGE:
 COMMANDS:
   validate    Run cluster validation test (distributed training)
   nccl        Run NCCL communication test
+  import      Import custom Docker image from GHCR
   help        Show this help message
 
 OPTIONS:
@@ -137,6 +139,9 @@ EXAMPLES:
 
   # CPU dry-run (no GPU needed)
   ./gpu-test validate --dry-run
+
+  # Import custom Docker image
+  ./gpu-test import
 
 ENVIRONMENT DETECTION:
   The tool automatically detects your environment:
@@ -281,6 +286,22 @@ run_nccl() {
     esac
 }
 
+# Run import
+run_import() {
+    echo "=========================================="
+    echo "Import Custom Docker Image"
+    echo "=========================================="
+    echo "Importing image from GHCR..."
+    echo ""
+    
+    if [ ! -f "scripts/import_image.sh" ]; then
+        echo "Error: scripts/import_image.sh not found"
+        exit 1
+    fi
+    
+    ./scripts/import_image.sh
+}
+
 # Main command dispatcher
 case $COMMAND in
     validate)
@@ -289,13 +310,16 @@ case $COMMAND in
     nccl)
         run_nccl
         ;;
+    import)
+        run_import
+        ;;
     help|--help|-h)
         show_help
         ;;
     *)
         echo "Error: Unknown command: $COMMAND"
         echo ""
-        echo "Available commands: validate, nccl, help"
+        echo "Available commands: validate, nccl, import, help"
         echo "Use './gpu-test help' for more information"
         exit 1
         ;;

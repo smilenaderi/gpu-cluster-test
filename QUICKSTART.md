@@ -26,6 +26,9 @@ chmod +x gpu-test
 
 # CPU test (no GPU needed)
 ./gpu-test validate --dry-run
+
+# Import custom Docker image
+./gpu-test import
 ```
 
 ## Commands
@@ -57,6 +60,15 @@ Tests all NCCL collective operations.
 ./gpu-test nccl --nodes 4 --gpus-per-node 4
 ```
 
+### `import` - Import Custom Docker Image
+Import the custom Docker image from GHCR for use with containers.
+
+**Example:**
+```bash
+# Import the container image
+./gpu-test import
+```
+
 ## Options
 
 | Option | Description | Default |
@@ -86,12 +98,22 @@ All output is displayed in real-time. No need to check log files.
 
 ## Advanced Usage
 
-### Direct Script Access
+### Using Custom Container Images
+
+```bash
+# Import the container image
+./gpu-test import
+```
+
+### Direct Script Access (Advanced)
 
 **Slurm Batch:**
 ```bash
 sbatch --nodes=2 --gpus-per-node=2 scripts/validate_clsuter.sh
 sbatch --nodes=2 --gpus-per-node=2 scripts/nccl_test.sh
+
+# Import image manually
+./scripts/import_image.sh
 ```
 
 **Slurm Interactive:**
@@ -188,10 +210,11 @@ gpu-cluster-test/
 ## Best Practices
 
 1. **Start small**: Test with 1-2 nodes first
-2. **Run NCCL test**: Verify communication before training
-3. **Use interactive mode**: For debugging and development
-4. **Monitor resources**: Check GPU memory and utilization
-5. **Scale gradually**: Increase nodes/GPUs incrementally
+2. **Import image first**: Run `./gpu-test import` if using custom containers
+3. **Run NCCL test**: Verify communication before training
+4. **Use interactive mode**: For debugging and development
+5. **Monitor resources**: Check GPU memory and utilization
+6. **Scale gradually**: Increase nodes/GPUs incrementally
 
 ## Support
 
@@ -200,3 +223,7 @@ For issues or questions:
 2. Review logs in `logs/` directory
 3. Test with `--dry-run` to isolate GPU issues
 4. Start with minimal resources and scale up
+
+---
+
+**Note:** The `./gpu-test` tool is the complete, recommended interface for all operations. It handles validation, NCCL testing, and image management in a unified way.
