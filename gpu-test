@@ -379,49 +379,15 @@ run_diagnose() {
         # Multi-node diagnostics
         case $env in
             slurm)
-                echo "Running multi-node diagnostics via Slurm..."
+                echo "Submitting batch job with sbatch..."
                 echo ""
-                echo "Creating temporary diagnostic job..."
+                NODES=$NODES GPUS_PER_NODE=$GPUS_PER_NODE \
+                    sbatch --nodes="$NODES" --gpus-per-node="$GPUS_PER_NODE" scripts/diagnose.sh
                 
-                # Create temporary job script
-                cat > /tmp/diagnose_job_$$.sh << 'EOFDIAG'
-#!/bin/bash
-#SBATCH --job-name=gpu-diagnose
-#SBATCH --output=logs/diagnose_%j.out
-#SBATCH --error=logs/diagnose_%j.err
-
-echo "=========================================="
-echo "Multi-Node GPU Diagnostics"
-echo "=========================================="
-echo "Job ID: $SLURM_JOB_ID"
-echo "Nodes: $SLURM_JOB_NUM_NODES"
-echo "=========================================="
-echo ""
-
-# Get master node
-MASTER_IP=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
-
-# Run diagnostics with torchrun
-srun python src/gpu_diagnostics.py
-
-echo ""
-echo "=========================================="
-echo "Diagnostics complete!"
-echo "=========================================="
-EOFDIAG
-                
-                chmod +x /tmp/diagnose_job_$$.sh
-                
-                JOB_ID=$(sbatch --nodes="$NODES" --gpus-per-node="$GPUS_PER_NODE" \
-                    --ntasks-per-node=1 --parsable /tmp/diagnose_job_$$.sh)
-                
-                rm /tmp/diagnose_job_$$.sh
-                
-                echo "Job submitted: $JOB_ID"
                 echo ""
-                echo "Monitor with:"
-                echo "  squeue -j $JOB_ID"
-                echo "  tail -f logs/diagnose_${JOB_ID}.out"
+                echo "Job submitted. Monitor with:"
+                echo "  squeue -u \$USER"
+                echo "  tail -f logs/diagnose_*.out"
                 ;;
             standalone)
                 echo "Running multi-node diagnostics with torchrun..."
