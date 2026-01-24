@@ -4,6 +4,11 @@
 #
 # Uses custom-built Docker image from GitHub Container Registry
 #
+# Container Image Behavior:
+#   - If local squashfs exists: uses /shared/gpu-cluster-test/images/smilenaderi+gpu-cluster-test+main.sqsh
+#   - If not found: automatically uses ghcr.io#smilenaderi/gpu-cluster-test:main
+#   - Override with: CONTAINER_IMAGE="your-image" sbatch scripts/validate_clsuter.sh
+#
 # Usage: 
 #   sbatch scripts/validate_clsuter.sh
 #   sbatch --nodes=4 --gpus-per-node=4 scripts/validate_clsuter.sh
@@ -30,8 +35,15 @@ GPUS_PER_NODE=${GPUS_PER_NODE:-8}
 EPOCHS=${EPOCHS:-5}
 BATCH_SIZE=${BATCH_SIZE:-64}
 MASTER_PORT=${MASTER_PORT:-29500}
-CONTAINER_IMAGE=${CONTAINER_IMAGE:-/shared/gpu-cluster-test/images/smilenaderi+gpu-cluster-test+main.sqsh}
 PROJECT_PATH=${PROJECT_PATH:-/shared/gpu-cluster-test}
+
+# Container image: use local squashfs if exists, otherwise use GitHub Container Registry
+LOCAL_SQUASHFS="/shared/gpu-cluster-test/images/smilenaderi+gpu-cluster-test+main.sqsh"
+if [ -f "$LOCAL_SQUASHFS" ]; then
+    CONTAINER_IMAGE=${CONTAINER_IMAGE:-$LOCAL_SQUASHFS}
+else
+    CONTAINER_IMAGE=${CONTAINER_IMAGE:-"ghcr.io#smilenaderi/gpu-cluster-test:main"}
+fi
 
 # Validation
 if [ "$NODES" -lt 1 ]; then

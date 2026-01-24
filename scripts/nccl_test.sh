@@ -5,6 +5,11 @@
 # Tests all_reduce, all_gather, broadcast, reduce_scatter
 # to verify NCCL communication across all GPUs.
 #
+# Container Image Behavior:
+#   - If local squashfs exists: uses /shared/gpu-cluster-test/images/smilenaderi+gpu-cluster-test+main.sqsh
+#   - If not found: automatically uses ghcr.io#smilenaderi/gpu-cluster-test:main
+#   - Override with: CONTAINER_IMAGE="your-image" sbatch scripts/nccl_test.sh
+#
 # Usage: 
 #   sbatch scripts/nccl_test.sh
 #   sbatch --nodes=4 --gpus-per-node=4 scripts/nccl_test.sh
@@ -29,8 +34,15 @@ set -euo pipefail  # Exit on error, undefined variables, and pipe failures
 NODES=${NODES:-$SLURM_JOB_NUM_NODES}
 GPUS_PER_NODE=${GPUS_PER_NODE:-8}
 MASTER_PORT=${MASTER_PORT:-29500}
-CONTAINER_IMAGE=${CONTAINER_IMAGE:-/shared/gpu-cluster-test/images/smilenaderi+gpu-cluster-test+main.sqsh}
 PROJECT_PATH=${PROJECT_PATH:-/shared/gpu-cluster-test}
+
+# Container image: use local squashfs if exists, otherwise use GitHub Container Registry
+LOCAL_SQUASHFS="/shared/gpu-cluster-test/images/smilenaderi+gpu-cluster-test+main.sqsh"
+if [ -f "$LOCAL_SQUASHFS" ]; then
+    CONTAINER_IMAGE=${CONTAINER_IMAGE:-$LOCAL_SQUASHFS}
+else
+    CONTAINER_IMAGE=${CONTAINER_IMAGE:-"ghcr.io#smilenaderi/gpu-cluster-test:main"}
+fi
 
 # Validation
 if [ "$NODES" -lt 1 ]; then

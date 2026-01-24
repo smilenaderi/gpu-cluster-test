@@ -2,15 +2,18 @@
 
 ## ⚠️ Important: Slurm Cluster Setup
 
-**If you're using Slurm with Enroot/Pyxis**, you must import the container image first:
+**If you're using Slurm with Enroot/Pyxis**, importing the container image locally is recommended for faster startup:
 https://github.com/NVIDIA/pyxis/issues/70
 
 ```bash
-# Import the container image locally (REQUIRED for Slurm)
+# Import the container image locally (recommended for Slurm)
 ./gpu-test import
 ```
 
-Run this command **before** any validation or NCCL tests on Slurm clusters.
+**Container Image Behavior:**
+- If local squashfs exists (`images/smilenaderi+gpu-cluster-test+main.sqsh`), it will be used
+- If not found, scripts automatically use `ghcr.io#smilenaderi/gpu-cluster-test:main`
+- Importing is optional but recommended for faster startup times
 
 ## Quick Reference
 
@@ -27,7 +30,7 @@ chmod +x gpu-test
 # Show help
 ./gpu-test help
 
-# Import container image (REQUIRED FIRST for Slurm clusters)
+# Import container image (optional but recommended for Slurm clusters)
 ./gpu-test import
 
 # Validate cluster (2 nodes × 2 GPUs)
@@ -45,9 +48,9 @@ chmod +x gpu-test
 
 ## Commands
 
-### `import` - Import Container Image (Run This First!)
+### `import` - Import Container Image (Optional but Recommended)
 
-**⚠️ Required for Slurm clusters** - Import the container image locally before running tests.
+**Recommended for Slurm clusters** - Import the container image locally for faster startup times.
 
 **Example:**
 ```bash
@@ -55,7 +58,10 @@ chmod +x gpu-test
 ./gpu-test import
 ```
 
-This is necessary due to a known issue where Slurm clusters cannot access external Docker repositories directly. The command downloads and converts the image to Enroot format for local use.
+**Container Image Behavior:**
+- If local squashfs exists, it will be used (faster)
+- If not found, scripts automatically fall back to `ghcr.io#smilenaderi/gpu-cluster-test:main`
+- You can override with `CONTAINER_IMAGE` environment variable
 
 ### `validate` - Cluster Validation
 Tests distributed training with PyTorch DDP.
@@ -129,7 +135,12 @@ sbatch --nodes=2 --gpus-per-node=2 scripts/nccl_test.sh
 
 # Import image manually
 ./scripts/import_image.sh
+
+# Override container image
+CONTAINER_IMAGE="ghcr.io#username/custom:tag" sbatch scripts/validate_clsuter.sh
 ```
+
+**Note:** `validate_clsuter.sh` and `nccl_test.sh` automatically use local squashfs if available, otherwise pull from GitHub Container Registry.
 
 **Slurm Interactive:**
 ```bash
@@ -224,7 +235,7 @@ gpu-cluster-test/
 
 ## Best Practices
 
-1. **Import image first**: Run `./gpu-test import` before any tests on Slurm clusters
+1. **Import image (optional)**: Run `./gpu-test import` for faster startup on Slurm clusters
 2. **Start small**: Test with 1-2 nodes first
 3. **Run NCCL test**: Verify communication before training
 4. **Use interactive mode**: For debugging and development

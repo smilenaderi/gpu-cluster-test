@@ -3,17 +3,31 @@
 A unified command-line tool for validating GPU cluster configurations. Tests distributed training with PyTorch DDP and NCCL communication across multiple nodes and GPUs.
 
 
-**If you're using Slurm with Enroot/Pyxis**, you must import the container image first:
+**If you're using Slurm with Enroot/Pyxis**, importing the container image locally is recommended for faster startup:
 https://github.com/NVIDIA/pyxis/issues/70
 
 ```bash
-# Import the container image locally (required for Slurm)
+# Import the container image locally (recommended for Slurm)
 ./gpu-test import
 ```
 
-This downloads the image from GitHub Container Registry and prepares it for local use with Enroot. Run this command **before** running any validation or NCCL tests on Slurm clusters.
+This downloads the image from GitHub Container Registry and prepares it for local use with Enroot.
+
+**Note:** If the local squashfs image doesn't exist, scripts will automatically fall back to using `ghcr.io#smilenaderi/gpu-cluster-test:main` from GitHub Container Registry. Importing is optional but recommended for faster startup times.
 
 ## Quick Start
+
+### Container Image
+
+All scripts automatically handle container images:
+- **Local squashfs exists**: Uses `/shared/gpu-cluster-test/images/smilenaderi+gpu-cluster-test+main.sqsh` (faster)
+- **Not found**: Automatically falls back to `ghcr.io#smilenaderi/gpu-cluster-test:main` (pulls from registry)
+- **Override**: Set `CONTAINER_IMAGE` environment variable or use `--container` flag
+
+Importing the image locally is optional but recommended for faster startup:
+```bash
+./gpu-test import  # Optional: downloads and caches image locally
+```
 
 ### Installation
 
@@ -59,9 +73,9 @@ chmod +x gpu-test
 
 ## Commands
 
-### `import` - Import Container Image (Run This First!)
+### `import` - Import Container Image (Optional but Recommended)
 
-**⚠️ Required for Slurm clusters** - Import the container image locally before running tests. This is necessary due to a known issue where Slurm clusters cannot access external Docker repositories directly.
+**Recommended for Slurm clusters** - Import the container image locally for faster startup times. If the local image doesn't exist, scripts will automatically fall back to pulling from GitHub Container Registry.
 
 ```bash
 # Import the container image from GitHub Container Registry
@@ -74,10 +88,15 @@ This command:
 - Stores it locally in the `images/` directory
 - Makes it available for all subsequent test runs
 
+**Container Image Behavior:**
+- If local squashfs file exists (`images/smilenaderi+gpu-cluster-test+main.sqsh`), it will be used
+- If not found, scripts automatically use `ghcr.io#smilenaderi/gpu-cluster-test:main`
+- You can override with `CONTAINER_IMAGE` environment variable
+
 **When to run:**
-- Before your first validation or NCCL test
+- Before your first validation or NCCL test (for faster startup)
 - After updating the container image
-- If you see "image not found" errors
+- Optional: scripts work without it but may be slower on first run
 
 ### `validate` - Cluster Validation Test
 
@@ -231,7 +250,12 @@ sbatch --nodes=2 --gpus-per-node=2 scripts/nccl_test.sh
 
 # With environment variables
 NODES=4 GPUS_PER_NODE=4 EPOCHS=10 sbatch scripts/validate_clsuter.sh
+
+# Override container image
+CONTAINER_IMAGE="ghcr.io#username/custom-image:tag" sbatch scripts/validate_clsuter.sh
 ```
+
+**Note:** Scripts automatically use local squashfs image if it exists (`images/smilenaderi+gpu-cluster-test+main.sqsh`), otherwise fall back to `ghcr.io#smilenaderi/gpu-cluster-test:main`.
 
 **Slurm Interactive:**
 ```bash
@@ -474,10 +498,15 @@ The GPU cluster test provides a unified CLI tool (`./gpu-test`) for validating G
 
 Quick start:
 ```bash
-./gpu-test import                                    # Run this FIRST on Slurm clusters
+# Optional: Import image locally for faster startup (recommended)
+./gpu-test import
+
+# Run validation and NCCL tests
 ./gpu-test validate --nodes 2 --gpus-per-node 2
 ./gpu-test nccl --nodes 2 --gpus-per-node 2
 ```
+
+**Container Image:** Scripts automatically use local squashfs if available, otherwise pull from `ghcr.io#smilenaderi/gpu-cluster-test:main`.
 
 The `./gpu-test` tool is the recommended way to use this project. For advanced use cases, you can access the underlying scripts in the `scripts/` directory.
 
