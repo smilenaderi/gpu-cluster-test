@@ -179,7 +179,18 @@ torchrun --nproc_per_node=2 src/nccl_test.py
 
 ## Troubleshooting
 
-### Not enough GPUs
+### Quick Diagnostics
+```bash
+# Run comprehensive diagnostics
+python src/gpu_diagnostics.py
+
+# Multi-GPU diagnostics
+torchrun --nproc_per_node=8 src/gpu_diagnostics.py
+```
+
+### Common Issues
+
+**Not enough GPUs**
 ```bash
 # Start with minimal resources
 ./gpu-test validate --nodes 1 --gpus-per-node 1
@@ -202,6 +213,8 @@ torchrun --nproc_per_node=2 src/nccl_test.py
 # CPU dry-run
 ./gpu-test validate --dry-run
 ```
+
+**For detailed troubleshooting, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md)**
 
 ## Environment Variables
 

@@ -202,6 +202,7 @@ gpu-cluster-test/
 ├── src/
 │   ├── train.py              # Main training script with DDP
 │   ├── nccl_test.py          # NCCL collective operations test
+│   ├── gpu_diagnostics.py    # Comprehensive diagnostics tool
 │   └── requirements.txt      # Python dependencies
 ├── scripts/
 │   ├── interactive_training_test.sh  # Interactive Slurm launcher
@@ -211,6 +212,7 @@ gpu-cluster-test/
 ├── images/                   # Container images (.sqsh files)
 ├── logs/                     # Job output logs
 ├── Dockerfile                # Container definition
+├── TROUBLESHOOTING.md        # Detailed troubleshooting guide
 └── readme.md                 # This file
 ```
 
@@ -433,6 +435,27 @@ Successful run should show:
 ```
 
 ## Troubleshooting
+
+### Quick Diagnostics
+
+Run the comprehensive diagnostics tool:
+
+```bash
+# Check GPU, CUDA, and network configuration
+python src/gpu_diagnostics.py
+
+# Multi-GPU diagnostics
+torchrun --nproc_per_node=8 src/gpu_diagnostics.py
+
+# Multi-node diagnostics  
+torchrun --nnodes=2 --nproc_per_node=8 src/gpu_diagnostics.py
+```
+
+### Common Issues
+
+For detailed troubleshooting, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+
+**Quick fixes:**
 
 ### NCCL Errors
 

@@ -10,6 +10,7 @@
 # Commands:
 #   validate    Run cluster validation test (distributed training)
 #   nccl        Run NCCL communication test
+#   diagnose    Run comprehensive GPU diagnostics
 #   import      Import custom Docker image from GHCR
 #   help        Show this help message
 #
@@ -20,10 +21,12 @@
 #   --batch-size N         Batch size per GPU (default: 64)
 #   --interactive          Run interactively (Slurm only)
 #   --dry-run              Test on CPU without GPU
+#   --debug                Enable full debug logging
 #
 # Examples:
 #   ./gpu-test validate --nodes 2 --gpus-per-node 2
 #   ./gpu-test nccl --nodes 4 --gpus-per-node 4
+#   ./gpu-test diagnose --nodes 2 --gpus-per-node 2
 #   ./gpu-test validate --nodes 1 --gpus-per-node 1 --interactive
 #   ./gpu-test validate --dry-run
 #
@@ -49,6 +52,7 @@ EPOCHS=5
 BATCH_SIZE=64
 INTERACTIVE=false
 DRY_RUN=false
+DEBUG=false
 
 # Parse command
 if [ $# -eq 0 ]; then
@@ -85,6 +89,10 @@ while [[ $# -gt 0 ]]; do
             DRY_RUN=true
             shift
             ;;
+        --debug)
+            DEBUG=true
+            shift
+            ;;
         --help|-h)
             COMMAND="help"
             shift
@@ -113,6 +121,7 @@ USAGE:
 COMMANDS:
   validate    Run cluster validation test (distributed training)
   nccl        Run NCCL communication test
+  diagnose    Run comprehensive GPU diagnostics
   import      Import custom Docker image from GHCR
   help        Show this help message
 
@@ -123,6 +132,7 @@ OPTIONS:
   --batch-size N         Batch size per GPU (default: 64)
   -i, --interactive      Run interactively with real-time output (validate only)
   --dry-run              Test on CPU without GPU
+  --debug                Enable full debug logging (NCCL, PyTorch, CUDA)
 
 EXAMPLES:
   # Small cluster test (4 GPUs)
@@ -134,8 +144,17 @@ EXAMPLES:
   # NCCL communication test
   ./gpu-test nccl --nodes 2 --gpus-per-node 2
 
+  # Run diagnostics (single node)
+  ./gpu-test diagnose
+
+  # Run diagnostics (multi-node)
+  ./gpu-test diagnose --nodes 2 --gpus-per-node 2
+
   # Interactive mode (see output in real-time)
   ./gpu-test validate --nodes 2 --gpus-per-node 2 -i
+
+  # Debug mode (full logging)
+  ./gpu-test validate --nodes 2 --gpus-per-node 2 --debug
 
   # CPU dry-run (no GPU needed)
   ./gpu-test validate --dry-run
@@ -173,6 +192,21 @@ run_validate() {
     local env=$(detect_environment)
     local total_gpus=$((NODES * GPUS_PER_NODE))
     
+    # Enable debug logging if requested
+    if [ "$DEBUG" = true ]; then
+        export NCCL_DEBUG=INFO
+        export NCCL_DEBUG_SUBSYS=ALL
+        export TORCH_DISTRIBUTED_DEBUG=DETAIL
+        export TORCH_CPP_LOG_LEVEL=INFO
+        export CUDA_LAUNCH_BLOCKING=1
+        echo "🔍 Debug logging enabled:"
+        echo "   NCCL_DEBUG=INFO"
+        echo "   NCCL_DEBUG_SUBSYS=ALL"
+        echo "   TORCH_DISTRIBUTED_DEBUG=DETAIL"
+        echo "   CUDA_LAUNCH_BLOCKING=1"
+        echo ""
+    fi
+    
     echo "=========================================="
     echo "GPU Cluster Validation Test"
     echo "=========================================="
@@ -184,6 +218,7 @@ run_validate() {
     echo "  - Batch size: $BATCH_SIZE"
     echo "  - Environment: $env"
     echo "  - Mode: $([ "$INTERACTIVE" = true ] && echo "Interactive" || echo "Batch")"
+    echo "  - Debug: $([ "$DEBUG" = true ] && echo "Enabled" || echo "Disabled")"
     echo "=========================================="
     echo ""
     
@@ -240,6 +275,19 @@ run_nccl() {
     local env=$(detect_environment)
     local total_gpus=$((NODES * GPUS_PER_NODE))
     
+    # Enable debug logging if requested
+    if [ "$DEBUG" = true ]; then
+        export NCCL_DEBUG=INFO
+        export NCCL_DEBUG_SUBSYS=ALL
+        export TORCH_DISTRIBUTED_DEBUG=DETAIL
+        export TORCH_CPP_LOG_LEVEL=INFO
+        echo "🔍 Debug logging enabled:"
+        echo "   NCCL_DEBUG=INFO"
+        echo "   NCCL_DEBUG_SUBSYS=ALL"
+        echo "   TORCH_DISTRIBUTED_DEBUG=DETAIL"
+        echo ""
+    fi
+    
     echo "=========================================="
     echo "NCCL Communication Test"
     echo "=========================================="
@@ -249,6 +297,7 @@ run_nccl() {
     echo "  - Total GPUs: $total_gpus"
     echo "  - Environment: $env"
     echo "  - Mode: $([ "$INTERACTIVE" = true ] && echo "Interactive" || echo "Batch")"
+    echo "  - Debug: $([ "$DEBUG" = true ] && echo "Enabled" || echo "Disabled")"
     echo "=========================================="
     echo ""
     
@@ -302,6 +351,96 @@ run_import() {
     ./scripts/import_image.sh
 }
 
+# Run diagnostics
+run_diagnose() {
+    local env=$(detect_environment)
+    
+    echo "=========================================="
+    echo "GPU Cluster Diagnostics"
+    echo "=========================================="
+    echo "Configuration:"
+    echo "  - Nodes: $NODES"
+    echo "  - GPUs per node: $GPUS_PER_NODE"
+    echo "  - Environment: $env"
+    echo "=========================================="
+    echo ""
+    
+    if [ "$NODES" -eq 1 ] && [ "$GPUS_PER_NODE" -eq 1 ]; then
+        # Single GPU diagnostics
+        echo "Running single-node diagnostics..."
+        echo ""
+        python src/gpu_diagnostics.py
+    elif [ "$NODES" -eq 1 ]; then
+        # Multi-GPU single node
+        echo "Running multi-GPU diagnostics on single node..."
+        echo ""
+        torchrun --nproc_per_node="$GPUS_PER_NODE" src/gpu_diagnostics.py
+    else
+        # Multi-node diagnostics
+        case $env in
+            slurm)
+                echo "Running multi-node diagnostics via Slurm..."
+                echo ""
+                echo "Creating temporary diagnostic job..."
+                
+                # Create temporary job script
+                cat > /tmp/diagnose_job_$$.sh << 'EOFDIAG'
+#!/bin/bash
+#SBATCH --job-name=gpu-diagnose
+#SBATCH --output=logs/diagnose_%j.out
+#SBATCH --error=logs/diagnose_%j.err
+
+echo "=========================================="
+echo "Multi-Node GPU Diagnostics"
+echo "=========================================="
+echo "Job ID: $SLURM_JOB_ID"
+echo "Nodes: $SLURM_JOB_NUM_NODES"
+echo "=========================================="
+echo ""
+
+# Get master node
+MASTER_IP=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
+
+# Run diagnostics with torchrun
+srun python src/gpu_diagnostics.py
+
+echo ""
+echo "=========================================="
+echo "Diagnostics complete!"
+echo "=========================================="
+EOFDIAG
+                
+                chmod +x /tmp/diagnose_job_$$.sh
+                
+                JOB_ID=$(sbatch --nodes="$NODES" --gpus-per-node="$GPUS_PER_NODE" \
+                    --ntasks-per-node=1 --parsable /tmp/diagnose_job_$$.sh)
+                
+                rm /tmp/diagnose_job_$$.sh
+                
+                echo "Job submitted: $JOB_ID"
+                echo ""
+                echo "Monitor with:"
+                echo "  squeue -j $JOB_ID"
+                echo "  tail -f logs/diagnose_${JOB_ID}.out"
+                ;;
+            standalone)
+                echo "Running multi-node diagnostics with torchrun..."
+                echo ""
+                torchrun \
+                    --nnodes="$NODES" \
+                    --nproc_per_node="$GPUS_PER_NODE" \
+                    src/gpu_diagnostics.py
+                ;;
+            *)
+                echo "Multi-node diagnostics not supported for $env"
+                echo "Running single-node diagnostics instead..."
+                echo ""
+                python src/gpu_diagnostics.py
+                ;;
+        esac
+    fi
+}
+
 # Main command dispatcher
 case $COMMAND in
     validate)
@@ -309,6 +448,9 @@ case $COMMAND in
         ;;
     nccl)
         run_nccl
+        ;;
+    diagnose)
+        run_diagnose
         ;;
     import)
         run_import
@@ -319,7 +461,7 @@ case $COMMAND in
     *)
         echo "Error: Unknown command: $COMMAND"
         echo ""
-        echo "Available commands: validate, nccl, import, help"
+        echo "Available commands: validate, nccl, diagnose, import, help"
         echo "Use './gpu-test help' for more information"
         exit 1
         ;;
