@@ -198,7 +198,7 @@ run_validate() {
             if [ "$INTERACTIVE" = true ]; then
                 echo "Running interactively with srun..."
                 echo ""
-                ./scripts/run_acceptance.sh \
+                ./scripts/interactive_training_test.sh \
                     --nodes "$NODES" \
                     --gpus-per-node "$GPUS_PER_NODE" \
                     --epochs "$EPOCHS" \
@@ -207,7 +207,7 @@ run_validate() {
                 echo "Submitting batch job with sbatch..."
                 echo ""
                 NODES=$NODES GPUS_PER_NODE=$GPUS_PER_NODE EPOCHS=$EPOCHS BATCH_SIZE=$BATCH_SIZE \
-                    sbatch --nodes="$NODES" --gpus-per-node="$GPUS_PER_NODE" scripts/validate_clsuter.sh
+                    sbatch --nodes="$NODES" --gpus-per-node="$GPUS_PER_NODE" scripts/distributed_training_test.sh
                 
                 echo ""
                 echo "Job submitted. Monitor with:"

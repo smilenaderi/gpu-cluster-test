@@ -130,21 +130,21 @@ All output is displayed in real-time. No need to check log files.
 
 **Slurm Batch:**
 ```bash
-sbatch --nodes=2 --gpus-per-node=2 scripts/validate_clsuter.sh
+sbatch --nodes=2 --gpus-per-node=2 scripts/distributed_training_test.sh
 sbatch --nodes=2 --gpus-per-node=2 scripts/nccl_test.sh
 
 # Import image manually
 ./scripts/import_image.sh
 
 # Override container image
-CONTAINER_IMAGE="ghcr.io#username/custom:tag" sbatch scripts/validate_clsuter.sh
+CONTAINER_IMAGE="ghcr.io#username/custom:tag" sbatch scripts/distributed_training_test.sh
 ```
 
-**Note:** `validate_clsuter.sh` and `nccl_test.sh` automatically use local squashfs if available, otherwise pull from GitHub Container Registry.
+**Note:** `distributed_training_test.sh` and `nccl_test.sh` automatically use local squashfs if available, otherwise pull from GitHub Container Registry.
 
 **Slurm Interactive:**
 ```bash
-./scripts/run_acceptance.sh --nodes 2 --gpus-per-node 2
+./scripts/interactive_training_test.sh --nodes 2 --gpus-per-node 2
 ```
 
 **Kubernetes:**
@@ -223,9 +223,9 @@ gpu-cluster-test/
 │   ├── nccl_test.py           # NCCL test script
 │   └── requirements.txt       # Python dependencies
 ├── scripts/
-│   ├── validate_clsuter.sh    # Slurm validation job
+│   ├── distributed_training_test.sh    # Slurm validation job
 │   ├── nccl_test.sh           # Slurm NCCL job
-│   ├── run_acceptance.sh      # Interactive launcher
+│   ├── interactive_training_test.sh      # Interactive launcher
 │   └── import_image.sh        # Import custom image
 ├── logs/                      # Job output logs
 ├── Dockerfile                 # Container definition

@@ -204,8 +204,8 @@ gpu-cluster-test/
 │   ├── nccl_test.py          # NCCL collective operations test
 │   └── requirements.txt      # Python dependencies
 ├── scripts/
-│   ├── run_acceptance.sh     # Interactive Slurm launcher
-│   ├── validate_clsuter.sh   # Slurm job with custom image
+│   ├── interactive_training_test.sh  # Interactive Slurm launcher
+│   ├── distributed_training_test.sh  # Slurm batch job with custom image
 │   ├── nccl_test.sh          # NCCL operations test job
 │   └── import_image.sh       # Import custom image from GHCR
 ├── images/                   # Container images (.sqsh files)
@@ -243,23 +243,23 @@ If you prefer to use the underlying scripts directly:
 **Slurm Batch Jobs:**
 ```bash
 # Validation test
-sbatch --nodes=2 --gpus-per-node=2 scripts/validate_clsuter.sh
+sbatch --nodes=2 --gpus-per-node=2 scripts/distributed_training_test.sh
 
 # NCCL test
 sbatch --nodes=2 --gpus-per-node=2 scripts/nccl_test.sh
 
 # With environment variables
-NODES=4 GPUS_PER_NODE=4 EPOCHS=10 sbatch scripts/validate_clsuter.sh
+NODES=4 GPUS_PER_NODE=4 EPOCHS=10 sbatch scripts/distributed_training_test.sh
 
 # Override container image
-CONTAINER_IMAGE="ghcr.io#username/custom-image:tag" sbatch scripts/validate_clsuter.sh
+CONTAINER_IMAGE="ghcr.io#username/custom-image:tag" sbatch scripts/distributed_training_test.sh
 ```
 
 **Note:** Scripts automatically use local squashfs image if it exists (`images/smilenaderi+gpu-cluster-test+main.sqsh`), otherwise fall back to `ghcr.io#smilenaderi/gpu-cluster-test:main`.
 
 **Slurm Interactive:**
 ```bash
-./scripts/run_acceptance.sh --nodes 2 --gpus-per-node 2 --epochs 5
+./scripts/interactive_training_test.sh --nodes 2 --gpus-per-node 2 --epochs 5
 ```
 
 **Kubernetes:**
@@ -337,12 +337,12 @@ IMAGE_URL="docker://ghcr.io#username/gpu-cluster-test:main"
 3. Import and run:
 ```bash
 ./scripts/import_image.sh
-sbatch scripts/validate_clsuter.sh
+sbatch scripts/distributed_training_test.sh
 ```
 
 Or use directly:
 ```bash
-./scripts/run_acceptance.sh --container ghcr.io/username/gpu-cluster-test:main
+./scripts/interactive_training_test.sh --container ghcr.io/username/gpu-cluster-test:main
 ```
 
 ## Configuration
@@ -361,7 +361,7 @@ python src/train.py --epochs 10 --batch-size 64 --dry-run
 
 **Launcher Options:**
 ```bash
-./scripts/run_acceptance.sh --nodes 4 --gpus-per-node 4 --epochs 10 --batch-size 128
+./scripts/interactive_training_test.sh --nodes 4 --gpus-per-node 4 --epochs 10 --batch-size 128
 ```
 - `--nodes`: Number of nodes (default: 2)
 - `--gpus-per-node`: GPUs per node (default: 8)
@@ -411,12 +411,12 @@ IMAGE_URL="docker://ghcr.io#username/gpu-cluster-test:main"
 3. Import and run:
 ```bash
 ./scripts/import_image.sh
-sbatch scripts/validate_clsuter.sh
+sbatch scripts/distributed_training_test.sh
 ```
 
 Or use directly:
 ```bash
-./scripts/run_acceptance.sh --container ghcr.io/username/gpu-cluster-test:main
+./scripts/interactive_training_test.sh --container ghcr.io/username/gpu-cluster-test:main
 ```
 
 ## Expected Output

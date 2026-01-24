@@ -6,7 +6,7 @@
 # allowing you to see real-time output and quickly validate cluster setup.
 #
 # Usage: 
-#   ./scripts/run_acceptance.sh [OPTIONS]
+#   ./scripts/interactive_training_test.sh [OPTIONS]
 #
 # Options:
 #   --nodes N              Number of nodes (default: 2)
@@ -19,8 +19,8 @@
 #   --master-port PORT     Master communication port (default: 29500)
 #
 # Examples:
-#   ./scripts/run_acceptance.sh --nodes 2 --gpus-per-node 2
-#   ./scripts/run_acceptance.sh --nodes 4 --gpus-per-node 4 --epochs 10
+#   ./scripts/interactive_training_test.sh --nodes 2 --gpus-per-node 2
+#   ./scripts/interactive_training_test.sh --nodes 4 --gpus-per-node 4 --epochs 10
 #
 
 set -euo pipefail  # Exit on error, undefined variables, and pipe failures

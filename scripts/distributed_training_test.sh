@@ -7,14 +7,14 @@
 # Container Image Behavior:
 #   - If local squashfs exists: uses /shared/gpu-cluster-test/images/smilenaderi+gpu-cluster-test+main.sqsh
 #   - If not found: automatically uses ghcr.io#smilenaderi/gpu-cluster-test:main
-#   - Override with: CONTAINER_IMAGE="your-image" sbatch scripts/validate_clsuter.sh
+#   - Override with: CONTAINER_IMAGE="your-image" sbatch scripts/distributed_training_test.sh
 #
 # Usage: 
-#   sbatch scripts/validate_clsuter.sh
-#   sbatch --nodes=4 --gpus-per-node=4 scripts/validate_clsuter.sh
+#   sbatch scripts/distributed_training_test.sh
+#   sbatch --nodes=4 --gpus-per-node=4 scripts/distributed_training_test.sh
 #
 # Override defaults with sbatch options or environment variables:
-#   NODES=4 GPUS_PER_NODE=4 EPOCHS=10 sbatch scripts/validate_clsuter.sh
+#   NODES=4 GPUS_PER_NODE=4 EPOCHS=10 sbatch scripts/distributed_training_test.sh
 #
 
 #SBATCH --job-name=gpu-test-custom
