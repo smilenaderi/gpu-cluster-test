@@ -44,9 +44,6 @@ chmod +x gpu-test
 
 # Interactive mode (real-time output)
 ./gpu-test validate --nodes 2 --gpus-per-node 2 -i
-
-# CPU test (no GPU needed)
-./gpu-test validate --dry-run
 ```
 
 ## Commands

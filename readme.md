@@ -15,6 +15,8 @@ This downloads the image from GitHub Container Registry and prepares it for loca
 
 **Note:** If the local squashfs image doesn't exist, scripts will automatically fall back to using `ghcr.io#smilenaderi/gpu-cluster-test:main` from GitHub Container Registry. Importing is optional but recommended for faster startup times.
 
+**Tested on:** This solution is prepared and tested on [Nebius Slurm Operator](https://nebius.ai/).
+
 ## Quick Start
 
 ### Container Image
@@ -44,20 +46,23 @@ chmod +x gpu-test
 # Show help
 ./gpu-test help
 
-# Import container image (REQUIRED FIRST for Slurm clusters)
+# Import container image (use this for faster first run time)
 ./gpu-test import
 
-# Run cluster validation test (2 nodes × 2 GPUs)
+# Run cluster validation test (runs small training with synthetic dataset)
 ./gpu-test validate --nodes 2 --gpus-per-node 2
 
 # Run NCCL communication test
 ./gpu-test nccl --nodes 2 --gpus-per-node 2
 
+# Run NCCL performance benchmark (measure bandwidth/latency)
+./gpu-test perf --nodes 2 --gpus-per-node 2
+
+# Run comprehensive GPU diagnostics
+./gpu-test diagnose --nodes 2 --gpus-per-node 2
+
 # Interactive mode (see output in real-time)
 ./gpu-test validate --nodes 2 --gpus-per-node 2 -i
-
-# CPU dry-run (no GPU needed)
-./gpu-test validate --dry-run
 ```
 
 ## Features
