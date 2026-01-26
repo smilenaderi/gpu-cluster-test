@@ -53,6 +53,10 @@ BATCH_SIZE=64
 INTERACTIVE=false
 DRY_RUN=false
 DEBUG=false
+TEST_TYPE="all_reduce"
+MIN_BYTES="8"
+MAX_BYTES="8G"
+ITERS=20
 
 # Parse command
 if [ $# -eq 0 ]; then
@@ -93,6 +97,22 @@ while [[ $# -gt 0 ]]; do
             DEBUG=true
             shift
             ;;
+        --test-type)
+            TEST_TYPE="$2"
+            shift 2
+            ;;
+        --min-bytes)
+            MIN_BYTES="$2"
+            shift 2
+            ;;
+        --max-bytes)
+            MAX_BYTES="$2"
+            shift 2
+            ;;
+        --iters)
+            ITERS="$2"
+            shift 2
+            ;;
         --help|-h)
             COMMAND="help"
             shift
@@ -121,6 +141,7 @@ USAGE:
 COMMANDS:
   validate    Run cluster validation test (distributed training)
   nccl        Run NCCL communication test
+  perf        Run NCCL performance benchmarks (all_reduce_perf, etc.)
   diagnose    Run comprehensive GPU diagnostics
   import      Import custom Docker image from GHCR
   help        Show this help message
@@ -133,6 +154,11 @@ OPTIONS:
   -i, --interactive      Run interactively with real-time output (validate only)
   --dry-run              Test on CPU without GPU
   --debug                Enable full debug logging (NCCL, PyTorch, CUDA)
+  --test-type TYPE       NCCL test type for perf command (default: all_reduce)
+                         Options: all_reduce, all_gather, broadcast, reduce_scatter, alltoall, all
+  --min-bytes SIZE       Minimum message size (default: 8)
+  --max-bytes SIZE       Maximum message size (default: 8G)
+  --iters N              Number of iterations (default: 20)
 
 EXAMPLES:
   # Small cluster test (4 GPUs)
@@ -143,6 +169,15 @@ EXAMPLES:
 
   # NCCL communication test
   ./gpu-test nccl --nodes 2 --gpus-per-node 2
+
+  # NCCL performance benchmark (all_reduce)
+  ./gpu-test perf --nodes 2 --gpus-per-node 2
+
+  # NCCL performance - all tests
+  ./gpu-test perf --nodes 2 --gpus-per-node 2 --test-type all
+
+  # NCCL performance - specific test with custom size
+  ./gpu-test perf --nodes 4 --gpus-per-node 4 --test-type all_gather --max-bytes 1G
 
   # Run diagnostics (single node)
   ./gpu-test diagnose
@@ -335,6 +370,76 @@ run_nccl() {
     esac
 }
 
+# Run NCCL performance benchmarks
+run_perf() {
+    local env=$(detect_environment)
+    local total_gpus=$((NODES * GPUS_PER_NODE))
+    
+    # Enable debug logging if requested
+    if [ "$DEBUG" = true ]; then
+        export NCCL_DEBUG=INFO
+        export NCCL_DEBUG_SUBSYS=ALL
+        echo "🔍 Debug logging enabled:"
+        echo "   NCCL_DEBUG=INFO"
+        echo "   NCCL_DEBUG_SUBSYS=ALL"
+        echo ""
+    fi
+    
+    echo "=========================================="
+    echo "NCCL Performance Benchmark"
+    echo "=========================================="
+    echo "Configuration:"
+    echo "  - Nodes: $NODES"
+    echo "  - GPUs per node: $GPUS_PER_NODE"
+    echo "  - Total GPUs: $total_gpus"
+    echo "  - Test Type: $TEST_TYPE"
+    echo "  - Size Range: $MIN_BYTES - $MAX_BYTES"
+    echo "  - Iterations: $ITERS"
+    echo "  - Environment: $env"
+    echo "  - Debug: $([ "$DEBUG" = true ] && echo "Enabled" || echo "Disabled")"
+    echo "=========================================="
+    echo ""
+    
+    case $env in
+        slurm)
+            echo "Submitting NCCL performance test as batch job..."
+            echo ""
+            NODES=$NODES GPUS_PER_NODE=$GPUS_PER_NODE TEST_TYPE=$TEST_TYPE \
+                MIN_BYTES=$MIN_BYTES MAX_BYTES=$MAX_BYTES ITERS=$ITERS \
+                sbatch --nodes="$NODES" --gpus-per-node="$GPUS_PER_NODE" scripts/nccl_perf_test.sh
+            
+            echo ""
+            echo "Job submitted. Monitor with:"
+            echo "  squeue -u \$USER"
+            echo "  tail -f logs/nccl_perf_*.out"
+            echo ""
+            echo "The test will measure bandwidth (GB/s) and latency (us) for:"
+            echo "  - Test: $TEST_TYPE"
+            echo "  - Message sizes: $MIN_BYTES to $MAX_BYTES"
+            ;;
+        kubernetes)
+            echo "Note: NCCL performance test for Kubernetes not yet implemented"
+            echo "Use Slurm or standalone mode"
+            ;;
+        standalone)
+            echo "Running NCCL performance test..."
+            echo ""
+            
+            # Check if test binary exists
+            test_cmd="${TEST_TYPE}_perf"
+            if ! command -v $test_cmd &> /dev/null; then
+                echo "❌ Error: $test_cmd not found in PATH"
+                echo "   Make sure NCCL tests are installed"
+                echo "   Install with: apt-get install libnccl-tests (Ubuntu/Debian)"
+                exit 1
+            fi
+            
+            # Run directly for standalone
+            $test_cmd -b $MIN_BYTES -e $MAX_BYTES -f 2 -g $GPUS_PER_NODE -n $ITERS -w 5 -c 1 -a 1
+            ;;
+    esac
+}
+
 # Run import
 run_import() {
     echo "=========================================="
@@ -415,6 +520,9 @@ case $COMMAND in
     nccl)
         run_nccl
         ;;
+    perf)
+        run_perf
+        ;;
     diagnose)
         run_diagnose
         ;;
@@ -427,7 +535,7 @@ case $COMMAND in
     *)
         echo "Error: Unknown command: $COMMAND"
         echo ""
-        echo "Available commands: validate, nccl, diagnose, import, help"
+        echo "Available commands: validate, nccl, perf, diagnose, import, help"
         echo "Use './gpu-test help' for more information"
         exit 1
         ;;

@@ -131,6 +131,32 @@ squeue -u $USER
 tail -f logs/nccl_*.out
 ```
 
+### `perf` - NCCL Performance Benchmarks
+
+Runs industry-standard NCCL performance tests (`all_reduce_perf`, etc.) to measure actual bandwidth (GB/s) and latency (microseconds) of GPU-to-GPU communication.
+
+```bash
+# Test all_reduce performance (most common)
+./gpu-test perf --nodes 2 --gpus-per-node 2
+
+# Run all NCCL performance tests
+./gpu-test perf --nodes 2 --gpus-per-node 2 --test-type all
+
+# Specific test with custom size range
+./gpu-test perf --nodes 4 --gpus-per-node 4 --test-type all_gather --max-bytes 1G
+
+# Monitor results
+tail -f logs/nccl_perf_*.out
+```
+
+**Test types:** `all_reduce` (default), `all_gather`, `broadcast`, `reduce_scatter`, `alltoall`, `all`
+
+**Use cases:**
+- Measure actual communication performance (not just pass/fail)
+- Identify network bottlenecks
+- Validate against expected bandwidth/latency
+- Compare different cluster configurations
+
 ## Options
 
 | Option | Description | Default |
@@ -141,6 +167,10 @@ tail -f logs/nccl_*.out
 | `--batch-size N` | Batch size per GPU | 64 |
 | `-i, --interactive` | Run interactively with real-time output (validate only) | false |
 | `--dry-run` | Test on CPU without GPU | false |
+| `--test-type TYPE` | NCCL test type for perf (all_reduce, all_gather, broadcast, reduce_scatter, alltoall, all) | all_reduce |
+| `--min-bytes SIZE` | Minimum message size for perf | 8 |
+| `--max-bytes SIZE` | Maximum message size for perf | 8G |
+| `--iters N` | Number of iterations for perf | 20 |
 
 ## Examples
 
@@ -162,6 +192,9 @@ tail -f logs/nccl_*.out
 
 # NCCL communication test
 ./gpu-test nccl --nodes 2 --gpus-per-node 4
+
+# NCCL performance benchmark
+./gpu-test perf --nodes 2 --gpus-per-node 4
 ```
 
 ### Large Scale Testing

@@ -39,6 +39,9 @@ chmod +x gpu-test
 # Test NCCL communication
 ./gpu-test nccl --nodes 2 --gpus-per-node 2
 
+# Measure NCCL performance (bandwidth/latency)
+./gpu-test perf --nodes 2 --gpus-per-node 2
+
 # Interactive mode (real-time output)
 ./gpu-test validate --nodes 2 --gpus-per-node 2 -i
 
@@ -90,6 +93,21 @@ Tests all NCCL collective operations.
 ./gpu-test nccl --nodes 4 --gpus-per-node 4
 ```
 
+### `perf` - NCCL Performance Benchmarks
+Measures actual bandwidth (GB/s) and latency (microseconds).
+
+**Examples:**
+```bash
+# Test all_reduce performance
+./gpu-test perf --nodes 2 --gpus-per-node 2
+
+# Run all NCCL performance tests
+./gpu-test perf --nodes 2 --gpus-per-node 2 --test-type all
+
+# Custom configuration
+./gpu-test perf --nodes 4 --gpus-per-node 4 --test-type all_gather --max-bytes 1G
+```
+
 ## Options
 
 | Option | Description | Default |
@@ -100,6 +118,8 @@ Tests all NCCL collective operations.
 | `--batch-size N` | Batch size per GPU | 64 |
 | `-i, --interactive` | Run interactively with real-time output | false |
 | `--dry-run` | Test on CPU | false |
+| `--test-type TYPE` | NCCL test type for perf (all_reduce, all_gather, etc.) | all_reduce |
+| `--max-bytes SIZE` | Maximum message size for perf | 8G |
 
 ## Output
 
@@ -251,9 +271,19 @@ gpu-cluster-test/
 1. **Import image (optional)**: Run `./gpu-test import` for faster startup on Slurm clusters
 2. **Start small**: Test with 1-2 nodes first
 3. **Run NCCL test**: Verify communication before training
-4. **Use interactive mode**: For debugging and development
-5. **Monitor resources**: Check GPU memory and utilization
-6. **Scale gradually**: Increase nodes/GPUs incrementally
+4. **Measure performance**: Use `perf` to get actual bandwidth/latency numbers
+5. **Use interactive mode**: For debugging and development
+6. **Monitor resources**: Check GPU memory and utilization
+7. **Scale gradually**: Increase nodes/GPUs incrementally
+
+## Test Comparison
+
+| Test | Output | Purpose |
+|------|--------|---------|
+| `validate` | Pass/Fail | Verify cluster can run training |
+| `nccl` | Pass/Fail | Verify NCCL operations work |
+| `perf` | Bandwidth/Latency | Measure actual performance (GB/s, microseconds) |
+| `diagnose` | System info | Debug configuration issues |
 
 ## Support
 
@@ -265,4 +295,4 @@ For issues or questions:
 
 ---
 
-**Note:** The `./gpu-test` tool is the complete, recommended interface for all operations. It handles validation, NCCL testing, and image management in a unified way.
+**Note:** The `./gpu-test` tool is the complete, recommended interface for all operations. It handles validation, NCCL testing, performance benchmarks, and image management in a unified way.
